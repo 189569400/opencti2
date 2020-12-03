@@ -20,7 +20,7 @@
   },
   "grakn": {
     "hostname": "localhost",
-    "port": 48555,
+    "port": 1729,
     "timeout": 30000
   },
   "redis": {

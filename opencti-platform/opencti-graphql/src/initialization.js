@@ -2,7 +2,7 @@
 import { v4 as uuid } from 'uuid';
 import { logger } from './config/conf';
 import { elCreateIndexes, elDeleteIndexes, elIsAlive, PLATFORM_INDICES } from './database/elasticSearch';
-import { graknIsAlive, internalDirectWrite, executeRead } from './database/grakn';
+import { graknInit, internalDirectWrite, executeRead, initDatabaseSchema } from './database/grakn';
 import applyMigration from './database/migration';
 import { initializeAdminUser } from './config/providers';
 import { isStorageAlive } from './database/minio';
@@ -88,7 +88,7 @@ export const CAPABILITIES = [
 // Check every dependencies
 export const checkSystemDependencies = async () => {
   // Check if Grakn is available
-  await graknIsAlive();
+  await graknInit();
   logger.info(`[CHECK] Grakn is alive`);
   // Check if elasticsearch is available
   await elIsAlive();
@@ -112,7 +112,7 @@ export const checkSystemDependencies = async () => {
 const initializeSchema = async () => {
   // Inject grakn schema
   const schema = fs.readFileSync('./src/opencti.gql', 'utf8');
-  await internalDirectWrite(schema);
+  await initDatabaseSchema(schema);
   logger.info(`[INIT] Grakn schema loaded`);
   // New platform so delete all indices to prevent conflict
   await elDeleteIndexes(PLATFORM_INDICES);
@@ -251,7 +251,7 @@ const initializeData = async () => {
 
 const isEmptyPlatform = async () => {
   const entityCount = await executeRead(async (rTx) => {
-    const iterator = await rTx.query('match $x sub entity; get;');
+    const iterator = await rTx.query().match('match $x sub entity; get;');
     const answers = await iterator.collect();
     return answers.length;
   });
@@ -259,9 +259,9 @@ const isEmptyPlatform = async () => {
 };
 
 const platformInit = async (noMigration = false) => {
-  await checkSystemDependencies();
   try {
-    const needToBeInitialized = await isEmptyPlatform();
+    await checkSystemDependencies();
+    const needToBeInitialized = true; // await isEmptyPlatform();
     if (needToBeInitialized) {
       logger.info(`[INIT] New platform detected, initialization...`);
       await initializeSchema();

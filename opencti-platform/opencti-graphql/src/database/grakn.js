@@ -1,6 +1,7 @@
 import moment from 'moment';
 import { cursorToOffset } from 'graphql-relay/lib/connection/arrayconnection';
-import Grakn from 'grakn-client';
+import { Grakn } from 'grakn-client/Grakn';
+import { GraknClient } from 'grakn-client/rpc/GraknClient';
 import * as R from 'ramda';
 import { __ } from 'ramda';
 import DataLoader from 'dataloader';
@@ -135,8 +136,8 @@ export const escapeString = (s) => (s ? s.replace(/\\/g, '\\\\').replace(/"/g, '
 // endregion
 
 // region client
-const client = new Grakn(`${conf.get('grakn:hostname')}:${conf.get('grakn:port')}`);
-let session = null;
+let dataSession = null;
+let schemaSession = null;
 // endregion
 
 // region basic commands
@@ -155,20 +156,13 @@ const closeTx = async (gTx) => {
   return true;
 };
 
-const takeReadTx = async () => {
-  if (session === null) session = await client.session('grakn');
-  return session
-    .transaction()
-    .read()
-    .catch(
-      /* istanbul ignore next */ (err) => {
-        if (err.code === 2 && session) {
-          session = null;
-          return takeReadTx();
-        }
-        throw DatabaseError('[GRAKN] TakeReadTx error', { grakn: err.details });
-      }
-    );
+const takeReadTx = async (isSchemaQuery = false) => {
+  const session = isSchemaQuery ? schemaSession : dataSession;
+  return session.transaction(Grakn.TransactionType.READ).catch(
+    /* istanbul ignore next */ (err) => {
+      throw DatabaseError('[GRAKN] TakeReadTx error', { grakn: err.details });
+    }
+  );
 };
 export const executeRead = async (executeFunction) => {
   const rTx = await takeReadTx();
@@ -183,20 +177,13 @@ export const executeRead = async (executeFunction) => {
   }
 };
 
-const takeWriteTx = async () => {
-  if (session === null) session = await client.session('grakn');
-  return session
-    .transaction()
-    .write()
-    .catch(
-      /* istanbul ignore next */ (err) => {
-        if (err.code === 2 && session) {
-          session = null;
-          return takeWriteTx();
-        }
-        throw DatabaseError('[GRAKN] TakeWriteTx error', { grakn: err.details });
-      }
-    );
+const takeWriteTx = async (isSchemaQuery = false) => {
+  const session = isSchemaQuery ? schemaSession : dataSession;
+  return session.transaction(Grakn.TransactionType.WRITE).catch(
+    /* istanbul ignore next */ (err) => {
+      throw DatabaseError('[GRAKN] TakeWriteTx error', { grakn: err.details });
+    }
+  );
 };
 const commitWriteTx = async (wTx) => {
   return wTx.commit().catch(
@@ -243,20 +230,44 @@ export const internalDirectWrite = async (query) => {
       }
     );
 };
-
-export const graknIsAlive = async () => {
+export const initDatabaseSchema = async (query) => {
+  const wTx = await takeWriteTx(true);
+  return wTx
+    .query()
+    .define(query)
+    .then(() => commitWriteTx(wTx))
+    .catch(
+      /* istanbul ignore next */ async (err) => {
+        await closeTx(wTx);
+        logger.error('[GRAKN] Write error', { error: err });
+        throw err;
+      }
+    );
+};
+const OPENCTI_DATABASE = 'opencti';
+const client = new GraknClient(`${conf.get('grakn:hostname')}:${conf.get('grakn:port')}`);
+const graknConnect = async () => {
+  const existingDb = await client.databases().contains(OPENCTI_DATABASE);
+  if (!existingDb) {
+    await client.databases().create(OPENCTI_DATABASE);
+  }
+  dataSession = await client.session(OPENCTI_DATABASE, Grakn.SessionType.DATA);
+  schemaSession = await client.session(OPENCTI_DATABASE, Grakn.SessionType.SCHEMA);
+};
+export const graknInit = async () => {
+  await graknConnect();
   return executeRead(() => {})
     .then(() => true)
     .catch(
-      /* istanbul ignore next */ () => {
-        throw DatabaseError('Grakn seems down');
+      /* istanbul ignore next */ (e) => {
+        throw DatabaseError('Grakn seems down', { error: e });
       }
     );
 };
 export const getGraknVersion = () => {
   // It seems that Grakn server does not expose its version yet:
   // https://github.com/graknlabs/client-nodejs/issues/47
-  return '1.8.4';
+  return '2.0.0-alpha';
 };
 
 const getAliasInternalIdFilter = (query, alias) => {

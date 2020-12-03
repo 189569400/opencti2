@@ -17,7 +17,7 @@ import {
   getGraknVersion,
   getRelationInferredById,
   getSingleValueNumber,
-  graknIsAlive,
+  graknInit,
   internalLoadById,
   listEntities,
   listRelations,
@@ -56,7 +56,7 @@ import { RELATION_MITIGATES } from '../../../src/schema/stixCoreRelationship';
 
 describe('Grakn basic and utils', () => {
   it('should database accessible', () => {
-    expect(graknIsAlive()).toBeTruthy();
+    expect(graknInit()).toBeTruthy();
     expect(getGraknVersion()).toEqual('1.8.4');
   });
   it('should escape according to grakn needs', () => {
