@@ -34,7 +34,7 @@ export const findAll = (args) => {
 export const ownedBy = async (workspaceId) => {
   const element = await load(
     `match $x isa User; $rel(owner:$x, so:$workspace) isa owned_by; 
-    $workspace has internal_id "${escapeString(workspaceId)}"; get;`,
+    $workspace has internal_id "${escapeString(workspaceId)}";`,
     ['x']
   );
   return element && element.x;

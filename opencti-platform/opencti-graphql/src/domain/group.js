@@ -33,7 +33,7 @@ export const members = async (groupId) => {
 export const markingDefinitions = async (groupId) => {
   const data = await find(
     `match $group isa Group, has internal_id "${escapeString(groupId)}";
-            (${RELATION_ACCESSES_TO}_from: $group, ${RELATION_ACCESSES_TO}_to: $marking) isa ${RELATION_ACCESSES_TO}; get;`,
+            (${RELATION_ACCESSES_TO}_from: $group, ${RELATION_ACCESSES_TO}_to: $marking) isa ${RELATION_ACCESSES_TO};`,
     ['marking']
   );
   return map((r) => r.marking, data);

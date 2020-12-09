@@ -120,7 +120,7 @@ const inferences = {
 };
 
 export const findAll = async () => {
-  const query = `match $r sub rule; get;`;
+  const query = `match $r sub rule;`;
   const currentRules = await executeRead(async (rTx) => {
     const iterator = await rTx.query(query);
     const answers = await iterator.collect();

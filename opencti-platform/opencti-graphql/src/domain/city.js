@@ -18,7 +18,7 @@ export const country = async (cityId) => {
   const element = await load(
     `match $to isa ${ENTITY_TYPE_LOCATION_COUNTRY}; 
     $rel(${RELATION_LOCATED_AT}_from:$from, ${RELATION_LOCATED_AT}_to:$to) isa ${RELATION_LOCATED_AT};
-    $from has internal_id "${escapeString(cityId)}"; get;`,
+    $from has internal_id "${escapeString(cityId)}";`,
     ['to']
   );
   return element && element.to;

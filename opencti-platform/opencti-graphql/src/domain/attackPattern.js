@@ -47,7 +47,7 @@ export const isSubAttackPattern = async (attackPatternId) => {
   const numberOfParents = await getSingleValueNumber(
     `match $parent isa ${ENTITY_TYPE_ATTACK_PATTERN}; 
     $rel(${RELATION_SUBTECHNIQUE_OF}_from:$subattackpattern, ${RELATION_SUBTECHNIQUE_OF}_to:$parent) isa ${RELATION_SUBTECHNIQUE_OF}; 
-    $subattackpattern has internal_id "${escapeString(attackPatternId)}"; get; count;`
+    $subattackpattern has internal_id "${escapeString(attackPatternId)}"; count;`
   );
   return numberOfParents > 0;
 };

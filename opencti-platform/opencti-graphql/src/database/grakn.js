@@ -335,7 +335,7 @@ const prepareAttribute = (key, value) => {
 // region Loader common
 export const querySubTypes = async (type, includeParents = false) => {
   return executeRead(async (rTx) => {
-    const query = `match $x sub ${escape(type)}; get;`;
+    const query = `match $x sub ${escape(type)};`;
     logger.debug(`[GRAKN - infer: false] querySubTypes`, { query });
     const iterator = await rTx.query(query);
     const answers = await iterator.collect();
@@ -360,7 +360,7 @@ export const querySubTypes = async (type, includeParents = false) => {
 };
 export const queryAttributes = async (type) => {
   return executeRead(async (rTx) => {
-    const query = `match $x type ${escape(type)}; get;`;
+    const query = `match $x type ${escape(type)};`;
     logger.debug(`[GRAKN - infer: false] querySubTypes`, { query });
     const iterator = await rTx.query(query);
     const answer = await iterator.next();
@@ -385,7 +385,7 @@ export const queryAttributes = async (type) => {
 };
 export const queryAttributeValues = async (type) => {
   return executeRead(async (rTx) => {
-    const query = `match $x isa ${escape(type)}; get;`;
+    const query = `match $x isa ${escape(type)};`;
     logger.debug(`[GRAKN - infer: false] queryAttributeValues`, { query });
     const iterator = await rTx.query(query);
     const answers = await iterator.collect();
@@ -410,7 +410,7 @@ export const queryAttributeValues = async (type) => {
 };
 export const attributeExists = async (attributeLabel) => {
   return executeRead(async (rTx) => {
-    const checkQuery = `match $x sub ${attributeLabel}; get;`;
+    const checkQuery = `match $x sub ${attributeLabel};`;
     logger.debug(`[GRAKN - infer: false] attributeExists`, { query: checkQuery });
     await rTx.query(checkQuery);
     return true;
@@ -418,7 +418,7 @@ export const attributeExists = async (attributeLabel) => {
 };
 export const queryAttributeValueByGraknId = async (id) => {
   return executeRead(async (rTx) => {
-    const query = `match $x id ${escape(id)}; get;`;
+    const query = `match $x id ${escape(id)};`;
     logger.debug(`[GRAKN - infer: false] queryAttributeValueById`, { query });
     const iterator = await rTx.query(query);
     const answer = await iterator.next();
@@ -713,7 +713,7 @@ export const batchToEntitiesThrough = async (fromIds, fromType, relationType, to
   const idsQuery = ids.map((s) => `{ $from has internal_id "${s}"; }`).join(' or ');
   const query = `match $to isa ${toEntityType}; 
   $rel(${relationType}_from:$from, ${relationType}_to:$to) isa ${relationType};
-  ${fromType ? `$from isa ${fromType};` : ''} ${idsQuery}; get;`;
+  ${fromType ? `$from isa ${fromType};` : ''} ${idsQuery};`;
   const test = await find(query, ['from', 'to']);
   const grouped = R.groupBy((e) => e.from.internal_id, test);
   return ids.map((id) => {
@@ -729,7 +729,7 @@ export const listToEntitiesThroughRelation = (fromId, fromType, relationType, to
     `match $to isa ${toEntityType}; 
     $rel(${relationType}_from:$from, ${relationType}_to:$to) isa ${relationType};
     ${fromType ? `$from isa ${fromType};` : ''}
-    $from has internal_id "${escapeString(fromId)}"; get;`,
+    $from has internal_id "${escapeString(fromId)}";`,
     ['to'],
     { paginationKey: 'to' }
   );
@@ -739,7 +739,7 @@ export const listFromEntitiesThroughRelation = (toId, toType, relationType, from
     `match $from isa ${fromEntityType}; 
     $rel(${relationType}_from:$from, ${relationType}_to:$to) isa ${relationType};
     ${toType ? `$to isa ${toType};` : ''}
-    $to has internal_id "${escapeString(toId)}"; get;`,
+    $to has internal_id "${escapeString(toId)}";`,
     ['from'],
     { paginationKey: 'from', infer }
   );
@@ -1104,7 +1104,7 @@ const findElementById = async (ids, type, args = {}) => {
     return R.map((key) => `{ $x has ${key} "${eid}";}`, keys).join(' or ');
   }, workingIds);
   const attrIds = searchIds.join(' or ');
-  const query = `match $x isa ${qType}; ${attrIds}; get;`;
+  const query = `match $x isa ${qType}; ${attrIds};`;
   const elements = await find(query, ['x'], args);
   return R.map((t) => t.x, elements);
 };
@@ -1219,7 +1219,7 @@ export const reindexAttributeValue = async (queryType, type, value) => {
   const index = inferIndexFromConceptType(queryType);
   const readQuery = `match $x isa ${queryType}, has ${escape(type)} $a, has internal_id $x_id; $a "${escapeString(
     value
-  )}"; get;`;
+  )}";`;
   logger.debug(`[GRAKN - infer: false] attributeUpdate`, { query: readQuery });
   const elementIds = await executeRead(async (rTx) => {
     const iterator = await rTx.query(readQuery, { infer: false });
@@ -1605,7 +1605,7 @@ const innerUpdateAttribute = async (user, instance, rawInput, wTx, options = {})
   const updatedInputs = [input];
   // --- 01 Get the current attribute types
   const escapedKey = escape(input.key);
-  const labelTypeQuery = `match $x type ${escapedKey}; get;`;
+  const labelTypeQuery = `match $x type ${escapedKey};`;
   const labelIterator = await wTx.query(labelTypeQuery);
   const labelAnswer = await labelIterator.next();
   // eslint-disable-next-line prettier/prettier
@@ -2667,7 +2667,7 @@ export const createEntity = async (user, input, type) => {
 // region mutation deletion
 const getElementsRelated = async (targetId, elements = [], options = {}) => {
   const eid = escapeString(targetId);
-  const read = `match $from has internal_id "${eid}"; $rel($from, $to) isa ${ABSTRACT_BASIC_RELATIONSHIP}; get;`;
+  const read = `match $from has internal_id "${eid}"; $rel($from, $to) isa ${ABSTRACT_BASIC_RELATIONSHIP};`;
   const connectedRelations = await find(read, ['rel'], options);
   const connectedRelationsIds = R.map((r) => {
     const { internal_id: internalId, entity_type: entityType } = r.rel;
@@ -2731,7 +2731,7 @@ export const deleteRelationsByFromAndTo = async (user, fromId, toId, relationshi
   const toThing = await internalLoadById(toId, opts);
   const read = `match $from has internal_id "${fromThing.internal_id}"; 
     $to has internal_id "${toThing.internal_id}"; 
-    $rel($from, $to) isa ${relationshipType}; get;`;
+    $rel($from, $to) isa ${relationshipType};`;
   const relationsToDelete = await find(read, ['rel'], opts);
   for (let i = 0; i < relationsToDelete.length; i += 1) {
     const r = relationsToDelete[i];
@@ -2758,7 +2758,7 @@ export const deleteAttributeById = async (id) => {
 export const getRelationInferredById = async (id) => {
   return executeRead(async (rTx) => {
     const decodedQuery = Buffer.from(id, 'base64').toString('ascii');
-    const query = `match ${decodedQuery} get;`;
+    const query = `match ${decodedQuery}`;
     logger.debug(`[GRAKN - infer: true] getRelationInferredById`, { query });
     const answerIterator = await rTx.query(query, { infer: true, explain: true });
     const answerConceptMap = await answerIterator.next();

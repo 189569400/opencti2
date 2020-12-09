@@ -31,7 +31,7 @@ const completeConnector = (connector) => {
 export const loadConnectorById = (id) =>
   loadById(id, ENTITY_TYPE_CONNECTOR).then((connector) => completeConnector(connector));
 export const connectors = () => {
-  const query = `match $c isa ${ENTITY_TYPE_CONNECTOR}; get;`;
+  const query = `match $c isa ${ENTITY_TYPE_CONNECTOR};`;
   return find(query, ['c']).then((elements) => map((conn) => completeConnector(conn.c), elements));
 };
 

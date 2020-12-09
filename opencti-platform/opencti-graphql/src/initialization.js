@@ -251,7 +251,7 @@ const initializeData = async () => {
 
 const isEmptyPlatform = async () => {
   const entityCount = await executeRead(async (rTx) => {
-    const iterator = await rTx.query().match('match $x sub entity; get;');
+    const iterator = await rTx.query().match('match $x sub entity;');
     const answers = await iterator.collect();
     return answers.length;
   });
@@ -261,7 +261,7 @@ const isEmptyPlatform = async () => {
 const platformInit = async (noMigration = false) => {
   try {
     await checkSystemDependencies();
-    const needToBeInitialized = true; // await isEmptyPlatform();
+    const needToBeInitialized = await isEmptyPlatform();
     if (needToBeInitialized) {
       logger.info(`[INIT] New platform detected, initialization...`);
       await initializeSchema();

@@ -115,7 +115,7 @@ export const token = async (userId, args, context) => {
   const element = await load(
     `match $to isa Token;
     $rel(${RELATION_AUTHORIZED_BY}_from:$from, ${RELATION_AUTHORIZED_BY}_to:$to) isa ${RELATION_AUTHORIZED_BY};
-    $from has internal_id "${escapeString(userId)}"; get;`,
+    $from has internal_id "${escapeString(userId)}";`,
     ['to']
   );
   return element && element.to.uuid;
@@ -124,7 +124,7 @@ export const token = async (userId, args, context) => {
 const internalGetToken = async (userId) => {
   const query = `match $to isa Token;
   $rel(${RELATION_AUTHORIZED_BY}_from:$from, ${RELATION_AUTHORIZED_BY}_to:$to) isa ${RELATION_AUTHORIZED_BY};
-  $from has internal_id "${escapeString(userId)}"; get;`;
+  $from has internal_id "${escapeString(userId)}";`;
   const element = await load(query, ['to']);
   return element && element.to;
 };
@@ -132,7 +132,7 @@ const internalGetToken = async (userId) => {
 const internalGetTokenByUUID = async (tokenUUID) => {
   const query = `match $token isa Token; $token has internal_id $token_id; $token has uuid "${escapeString(
     tokenUUID
-  )}"; get;`;
+  )}";`;
   return load(query, ['token']).then((result) => result && result.token);
 };
 
@@ -144,7 +144,7 @@ export const getRoles = async (userId) => {
   const data = await find(
     `match $client isa User, has internal_id "${escapeString(userId)}";
             (${RELATION_HAS_ROLE}_from: $client, ${RELATION_HAS_ROLE}_to: $role) isa ${RELATION_HAS_ROLE};
-            $role has internal_id $role_id; get;`,
+            $role has internal_id $role_id;`,
     ['role']
   );
   return R.map((r) => r.role, data);
@@ -154,7 +154,7 @@ export const getMarkings = async (userId) => {
   const userMarkingsPromise = find(
     `match $client isa User, has internal_id "${escapeString(userId)}";
             (${RELATION_MEMBER_OF}_from: $client, ${RELATION_MEMBER_OF}_to: $group) isa ${RELATION_MEMBER_OF}; 
-            (${RELATION_ACCESSES_TO}_from: $group, ${RELATION_ACCESSES_TO}_to: $marking) isa ${RELATION_ACCESSES_TO}; get;`,
+            (${RELATION_ACCESSES_TO}_from: $group, ${RELATION_ACCESSES_TO}_to: $marking) isa ${RELATION_ACCESSES_TO};`,
     ['marking']
   ).then((data) => R.map((r) => r.marking, data));
   const allMarkingsPromise = allMarkings().then((data) => R.map((i) => i.node, data.edges));
@@ -178,7 +178,7 @@ export const getCapabilities = async (userId) => {
     `match $client isa User, has internal_id "${escapeString(userId)}";
             (${RELATION_HAS_ROLE}_from: $client, ${RELATION_HAS_ROLE}_to: $role) isa ${RELATION_HAS_ROLE}; 
             (${RELATION_HAS_CAPABILITY}_from: $role, ${RELATION_HAS_CAPABILITY}_to: $capability) isa ${RELATION_HAS_CAPABILITY}; 
-            $capability has internal_id $capability_id; get;`,
+            $capability has internal_id $capability_id;`,
     ['capability']
   );
   const capabilities = R.map((r) => r.capability, data);
@@ -194,7 +194,7 @@ export const getRoleCapabilities = async (roleId) => {
     `match $role isa Role, has internal_id "${escapeString(roleId)}";
             (${RELATION_HAS_CAPABILITY}_from: $role, ${RELATION_HAS_CAPABILITY}_to: $capability) isa ${RELATION_HAS_CAPABILITY}; 
             $role has internal_id $role_id;
-            $capability has internal_id $capability_id; get;`,
+            $capability has internal_id $capability_id;`,
     ['capability']
   );
   return R.map((r) => r.capability, data);
@@ -361,7 +361,7 @@ export const userDeleteRelation = async (user, userId, toId, relationshipType) =
 export const loginFromProvider = async (email, name) => {
   const result = await load(
     `match $client isa User, has user_email "${escapeString(email)}"; 
-    (${RELATION_AUTHORIZED_BY}_from:$client, ${RELATION_AUTHORIZED_BY}_to:$token); get;`,
+    (${RELATION_AUTHORIZED_BY}_from:$client, ${RELATION_AUTHORIZED_BY}_to:$token);`,
     ['client', 'token']
   );
   if (R.isNil(result)) {
@@ -381,8 +381,7 @@ export const login = async (email, password) => {
   const query = `match $client isa User, has user_email "${escapeString(email).toLowerCase()}";
    $client has internal_id $client_id;
    (${RELATION_AUTHORIZED_BY}_from:$client, ${RELATION_AUTHORIZED_BY}_to:$token) isa ${RELATION_AUTHORIZED_BY}; 
-   $token has internal_id $token_id;
-   get;`;
+   $token has internal_id $token_id;`;
   const result = await load(query, ['client', 'token']);
   if (R.isNil(result)) throw AuthenticationFailure();
   const dbPassword = result.client.password;
@@ -432,7 +431,7 @@ export const findByTokenUUID = async (tokenValue) => {
     const data = await load(
       `match $token isa Token;
             $token has uuid "${escapeString(tokenValue)}", has revoked false;
-            (${RELATION_AUTHORIZED_BY}_from:$client, ${RELATION_AUTHORIZED_BY}_to:$token) isa ${RELATION_AUTHORIZED_BY}; get;`,
+            (${RELATION_AUTHORIZED_BY}_from:$client, ${RELATION_AUTHORIZED_BY}_to:$token) isa ${RELATION_AUTHORIZED_BY};`,
       ['client', 'token']
     );
     if (!data) return undefined;
