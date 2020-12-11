@@ -56,10 +56,10 @@ const graknStateStorage = {
         // We have only one instance of migration status.
         const q1 = `match $x isa MigrationStatus, has lastRun $run; delete $x has lastRun $run;`;
         logger.debug(`[MIGRATION] step 1`, { query: q1 });
-        await wTx.query(q1);
+        await wTx.query().delete(q1);
         const q2 = `match $x isa MigrationStatus; insert $x has lastRun "${set.lastRun}";`;
         logger.debug(`[MIGRATION] step 2`, { query: q2 });
-        await wTx.query(q2);
+        await wTx.query().insert(q2);
         // Insert the migration reference
         const q3 = `insert $x isa MigrationReference,
           has entity_type "MigrationReference",
@@ -69,14 +69,14 @@ const graknStateStorage = {
           has timestamp ${mig.timestamp};`;
         logger.debug(`[MIGRATION] step 3`, { query: q3 });
         // Attach the reference to the migration status.
-        await wTx.query(q3);
+        await wTx.query().insert(q3);
         // Attach the reference to the migration status.
         const q4 = `match $status isa MigrationStatus; 
           $ref isa MigrationReference, has title "${mig.title}"; 
           insert (${RELATION_MIGRATES}_from: $status, ${RELATION_MIGRATES}_to: $ref) isa ${RELATION_MIGRATES}, 
           has internal_id "${uuid()}", has standard_id "migrates--${uuid()}";`;
         logger.debug(`[MIGRATION] step 4`, { query: q4 });
-        await wTx.query(q4);
+        await wTx.query().insert(q4);
         logger.info(`[MIGRATION] Saving current configuration, ${mig.title}`);
       });
       return fn();

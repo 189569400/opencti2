@@ -2,7 +2,7 @@
 import { v4 as uuid } from 'uuid';
 import { logger } from './config/conf';
 import { elCreateIndexes, elDeleteIndexes, elIsAlive, PLATFORM_INDICES } from './database/elasticSearch';
-import { graknInit, internalDirectWrite, executeRead, initDatabaseSchema } from './database/grakn';
+import {graknInit, internalDirectWrite, executeRead, schemaDefineOperation, graknWriteTest} from './database/grakn';
 import applyMigration from './database/migration';
 import { initializeAdminUser } from './config/providers';
 import { isStorageAlive } from './database/minio';
@@ -112,7 +112,7 @@ export const checkSystemDependencies = async () => {
 const initializeSchema = async () => {
   // Inject grakn schema
   const schema = fs.readFileSync('./src/opencti.gql', 'utf8');
-  await initDatabaseSchema(schema);
+  await schemaDefineOperation(schema);
   logger.info(`[INIT] Grakn schema loaded`);
   // New platform so delete all indices to prevent conflict
   await elDeleteIndexes(PLATFORM_INDICES);
@@ -261,7 +261,7 @@ const isEmptyPlatform = async () => {
 const platformInit = async (noMigration = false) => {
   try {
     await checkSystemDependencies();
-    const needToBeInitialized = await isEmptyPlatform();
+    const needToBeInitialized = true; // await isEmptyPlatform();
     if (needToBeInitialized) {
       logger.info(`[INIT] New platform detected, initialization...`);
       await initializeSchema();

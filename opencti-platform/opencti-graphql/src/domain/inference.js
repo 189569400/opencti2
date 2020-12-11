@@ -122,7 +122,7 @@ const inferences = {
 export const findAll = async () => {
   const query = `match $r sub rule;`;
   const currentRules = await executeRead(async (rTx) => {
-    const iterator = await rTx.query(query);
+    const iterator = await rTx.query().match(query);
     const answers = await iterator.collect();
     return Promise.all(
       answers.map(async (answer) => {
@@ -139,7 +139,7 @@ export const inferenceEnable = async (id) => {
   if (inference) {
     const query = `define ${inference.rule}`;
     await executeWrite(async (wTx) => {
-      wTx.query(query);
+      wTx.query().define(query);
     });
   }
   return assoc('enabled', true, inference);
@@ -150,7 +150,7 @@ export const inferenceDisable = async (id) => {
   if (inference) {
     const query = `undefine rule ${inference.name};`;
     await executeWrite(async (wTx) => {
-      wTx.query(query);
+      wTx.query().undefine(query);
     });
   }
   return assoc('enabled', false, inference);

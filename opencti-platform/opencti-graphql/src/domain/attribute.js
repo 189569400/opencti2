@@ -5,7 +5,7 @@ import {
   queryAttributeValueByGraknId,
   queryAttributeValues,
   queryAttributes,
-  reindexAttributeValue,
+  reindexAttributeValue, schemaDefineOperation,
 } from '../database/grakn';
 import { logger } from '../config/conf';
 import {
@@ -25,12 +25,14 @@ export const findAll = (args) => {
 };
 
 export const addAttribute = async (attribute) => {
+  // const test = await schemaDefineOperation(queryTest);
   return executeWrite(async (wTx) => {
     const query = `insert $attribute isa ${attribute.type}; $attribute "${escapeString(attribute.value)}";`;
     logger.debug(`[GRAKN - infer: false] addAttribute`, { query });
-    const attributeIterator = await wTx.query(query);
+    const attributeIterator = wTx.query().insert(query);
     const createdAttribute = await attributeIterator.next();
-    const createdAttributeId = await createdAttribute.map().get('attribute').id;
+    // eslint-disable-next-line no-underscore-dangle
+    const createdAttributeId = createdAttribute.map().get('$attribute')._iid;
     return {
       id: createdAttributeId,
       type: attribute.type,
@@ -55,7 +57,7 @@ export const attributeUpdate = async (id, input) => {
       input.value
     )}"; insert $e has ${escape(input.type)} $attribute; $attribute "${escapeString(input.newValue)}";`;
     logger.debug(`[GRAKN - infer: false] attributeUpdate`, { query: writeQuery });
-    await wTx.query(writeQuery);
+    await wTx.query().insert(writeQuery);
   });
   // Link new attribute to every relations
   await executeWrite(async (wTx) => {
@@ -63,7 +65,7 @@ export const attributeUpdate = async (id, input) => {
       input.value
     )}"; insert $e has ${escape(input.type)} $attribute; $attribute "${escapeString(input.newValue)}";`;
     logger.debug(`[GRAKN - infer: false] attributeUpdate`, { query: writeQuery });
-    await wTx.query(writeQuery);
+    await wTx.query().insert(writeQuery);
   });
   // Delete old attribute
   await deleteAttributeById(id);

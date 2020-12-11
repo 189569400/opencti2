@@ -5517,19 +5517,19 @@ graceful-fs@^4.1.11, graceful-fs@^4.1.15, graceful-fs@^4.1.2, graceful-fs@^4.2.4
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.4.tgz#2256bde14d3632958c465ebc96dc467ca07a29fb"
   integrity sha512-WjKPNJF79dtJAVniUlGGWHYGz2jWxT6VhN/4m1NdkbZ2nOsEF+cI1Edgql5zCRhs/VsQYRvrXctxktVXZUkixw==
 
-grakn-client@^2.0.0-alpha:
-  version "2.0.0-alpha"
-  resolved "https://registry.yarnpkg.com/grakn-client/-/grakn-client-2.0.0-alpha.tgz#1dac9058fe883b61484c1286359253f30a3f6ce1"
-  integrity sha512-Xd4UecVk6Jzo5Cu/gjqlBP0E9gTTRKBs1bU+8xMcbxzWXArQYKK9whC75gWMV0crsdcmxUd7NM5tgrkOqGha1w==
+grakn-client@^2.0.0-alpha-3:
+  version "2.0.0-alpha-3"
+  resolved "https://registry.yarnpkg.com/grakn-client/-/grakn-client-2.0.0-alpha-3.tgz#e3a39cc98b8c6011287e135c5ba7a39269bdf8f1"
+  integrity sha512-R/O0xdxPBEFD8yYBFe+CQAH2YnUrKi5vPyWtBp+UkfGI6AFDn9aAO3zcQcDX35zOP2yPMEqjEZZ/20OCZ7938w==
   dependencies:
     "@grpc/grpc-js" "1.2.1"
     google-protobuf "3.12.4"
-    graknlabs-grpc-protocol "2.0.0-alpha"
+    graknlabs-protocol "2.0.0-alpha-2"
 
-graknlabs-grpc-protocol@2.0.0-alpha:
-  version "2.0.0-alpha"
-  resolved "https://registry.yarnpkg.com/graknlabs-grpc-protocol/-/graknlabs-grpc-protocol-2.0.0-alpha.tgz#37bd915c8ecf623fe03a2096e48dec18fa4cc754"
-  integrity sha512-cAYTD2S0jubZZQ/JIYe7n8XlhY22sa8k6FauT9lAq9Ih001LAcKW8gH6Xe5eiU4G5kDvkdhlkjoT8YHWsk9b/Q==
+graknlabs-protocol@2.0.0-alpha-2:
+  version "2.0.0-alpha-2"
+  resolved "https://registry.yarnpkg.com/graknlabs-protocol/-/graknlabs-protocol-2.0.0-alpha-2.tgz#be8b6d35b436b4d59ed92d509a1085ba2641e519"
+  integrity sha512-drrKN6eeLoNTTF4/sc/NYYQ1xuG/m2F97nQ4SS+MAqXOhmNYqR2hceKyIBEtxqJvjydxpa7MulZ4BOtax2aalQ==
   dependencies:
     "@grpc/grpc-js" "1.2.1"
 
