@@ -428,12 +428,10 @@ export const findByTokenUUID = async (tokenValue) => {
   // This method is call every time a user to a platform action
   let user = await getAccessCache(tokenValue);
   if (!user) {
-    const data = await load(
-      `match $token isa Token;
-            $token has uuid "${escapeString(tokenValue)}", has revoked false;
-            (${RELATION_AUTHORIZED_BY}_from:$client, ${RELATION_AUTHORIZED_BY}_to:$token) isa ${RELATION_AUTHORIZED_BY};`,
-      ['client', 'token']
-    );
+    const query = `match $token isa Token;
+          $token has uuid "${escapeString(tokenValue)}", has revoked false;
+          (${RELATION_AUTHORIZED_BY}_from:$client, ${RELATION_AUTHORIZED_BY}_to:$token) isa ${RELATION_AUTHORIZED_BY};`;
+    const data = await load(query, ['client', 'token']);
     if (!data) return undefined;
     // eslint-disable-next-line no-shadow
     const { client, token } = data;

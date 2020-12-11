@@ -5,7 +5,7 @@ import {
   queryAttributeValueByGraknId,
   queryAttributeValues,
   queryAttributes,
-  reindexAttributeValue, schemaDefineOperation,
+  reindexAttributeValue,
 } from '../database/grakn';
 import { logger } from '../config/conf';
 import {

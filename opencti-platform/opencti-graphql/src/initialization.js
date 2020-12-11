@@ -2,7 +2,14 @@
 import { v4 as uuid } from 'uuid';
 import { logger } from './config/conf';
 import { elCreateIndexes, elDeleteIndexes, elIsAlive, PLATFORM_INDICES } from './database/elasticSearch';
-import {graknInit, internalDirectWrite, executeRead, schemaDefineOperation, graknWriteTest} from './database/grakn';
+import {
+  graknInit,
+  internalDirectWrite,
+  executeRead,
+  schemaDefineOperation,
+  graknWriteTest,
+  find, graknBug,
+} from './database/grakn';
 import applyMigration from './database/migration';
 import { initializeAdminUser } from './config/providers';
 import { isStorageAlive } from './database/minio';
@@ -260,11 +267,12 @@ const isEmptyPlatform = async () => {
 
 const platformInit = async (noMigration = false) => {
   try {
-    await checkSystemDependencies();
+    // await checkSystemDependencies();
     const needToBeInitialized = true; // await isEmptyPlatform();
     if (needToBeInitialized) {
       logger.info(`[INIT] New platform detected, initialization...`);
       await initializeSchema();
+      await graknBug();
       await initializeMigration();
       await initializeData();
       await initializeAdminUser();

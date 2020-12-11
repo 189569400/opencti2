@@ -1,3 +1,4 @@
+/* eslint-disable */
 import moment from 'moment';
 import { cursorToOffset } from 'graphql-relay/lib/connection/arrayconnection';
 import { Grakn } from 'grakn-client/Grakn';
@@ -101,6 +102,7 @@ import {
 import { ENTITY_TYPE_LABEL, isStixMetaObject } from '../schema/stixMetaObject';
 import { isStixSightingRelationship } from '../schema/stixSightingRelationship';
 import { isStixCyberObservable } from '../schema/stixCyberObservableObject';
+import {uuidv4} from "grakn-client/dependencies_internal";
 
 // region global variables
 export const MAX_BATCH_SIZE = 25;
@@ -236,7 +238,66 @@ export const internalDirectWrite = async (query) => {
     throw err;
   }
 };
+
+export const graknBug = async () => {
+  const session = await client.session(OPENCTI_DATABASE, Grakn.SessionType.DATA);
+  const userInternalId = uuidv4();
+  const userStandardId = uuidv4();
+  // Insert a user
+  const wTx1 = await session.transaction(Grakn.TransactionType.WRITE);
+  await wTx1.query().insert(`insert $entity isa User, has internal_id "${userInternalId}", has standard_id "${userStandardId}", has user_email "admin@opencti.io";`);
+  await wTx1.commit();
+  // Insert a token
+  const tokenInternalId = uuidv4();
+  const tokenStandardId = uuidv4();
+  const tokenUUID = uuidv4();
+  const wTx2 = await session.transaction(Grakn.TransactionType.WRITE);
+  await wTx2.query().insert(`insert $entity isa Token, has internal_id "${tokenInternalId}", has standard_id "${tokenStandardId}", has uuid "${tokenUUID}", has name "Default", has revoked false;`);
+  await wTx2.commit();
+  // Create the relation
+  const relInternalId = uuidv4();
+  const relStandardId = uuidv4();
+  const wTx3 = await session.transaction(Grakn.TransactionType.WRITE);
+  await wTx3.query().insert(`match $from isa thing; $from has internal_id "${userInternalId}"; $to has internal_id "${tokenInternalId}"; insert $rel(authorized-by_from: $from, authorized-by_to: $to) isa authorized-by,has internal_id "${relInternalId}", has standard_id "${relStandardId}", has entity_type "authorized-by";`);
+  await wTx3.commit();
+  // Read check Token
+  const wTx4 = await session.transaction(Grakn.TransactionType.READ);
+  const iteratorToken = wTx4.query().match(`match $entity isa Token; $entity has internal_id "${tokenInternalId}";`);
+  const tokenAnswer = await iteratorToken.collect();
+  if (tokenAnswer.length !== 1) throw Error('cant find token');
+  console.log('tokenAnswer', tokenAnswer[0].map().get('$entity'));
+  await wTx4.close();
+  // Read check User
+  const wTx5 = await session.transaction(Grakn.TransactionType.READ);
+  const iteratorUser = wTx5.query().match(`match $entity isa User; $entity has standard_id "${userStandardId}";`);
+  const userAnswer = await iteratorUser.collect();
+  if (userAnswer.length !== 1) throw Error('cant find user');
+  console.log('userAnswer', userAnswer[0].map().get('$entity'));
+  await wTx5.close();
+  // Read the relation
+  const wTx6 = await session.transaction(Grakn.TransactionType.READ);
+  const iteratorRel1 = wTx6.query().match(`match $rel isa authorized-by;`);
+  const relAnswer1 = await iteratorRel1.collect();
+  if (relAnswer1.length !== 1) throw Error('cant find relation');
+  console.log('relAnswer1', relAnswer1[0].map().get('$rel'));
+  await wTx6.close();
+  // Read the relation
+  const wTx7 = await session.transaction(Grakn.TransactionType.READ);
+  const iteratorRel2 = wTx7.query().match(`match $token isa Token; $token has uuid "${tokenUUID}", has revoked false; (authorized-by_from:$client, authorized-by_to:$token) isa authorized-by;`);
+  const relAnswer2 = await iteratorRel2.collect();
+  if (relAnswer2.length !== 1) throw Error('cant find relation');
+  console.log('relAnswer', relAnswer2[0].map().get('$token'));
+  await wTx7.close();
+  // Close session
+  await session.close();
+};
+
+
 export const schemaDefineOperation = async (query) => {
+  const existingDb = await client.databases().contains(OPENCTI_DATABASE);
+  if (!existingDb) {
+    await client.databases().create(OPENCTI_DATABASE);
+  }
   const session = await client.session(OPENCTI_DATABASE, Grakn.SessionType.SCHEMA);
   const wTx = await session.transaction(Grakn.TransactionType.WRITE);
   return wTx
@@ -281,7 +342,7 @@ const getAliasInternalIdFilter = (query, alias) => {
  * @param query
  */
 export const extractQueryVars = (query) => {
-  const vars = R.uniq(R.map((m) => ({ alias: m.replace('$', '') }), query.match(/\$[a-z_]+/gi)));
+  const vars = R.uniq(R.map((m) => ({ alias: m }), query.match(/\$[a-z_]+/gi)));
   const varWithKey = R.map((v) => ({ alias: v.alias, internalIdKey: getAliasInternalIdFilter(query, v.alias) }), vars);
   const relationsVars = Array.from(query.matchAll(/\(([a-z_\-\s:$]+),([a-z_\-\s:$]+)\)[\s]*isa[\s]*([a-z_-]+)/g));
   const roles = R.flatten(
@@ -293,9 +354,9 @@ export const extractQueryVars = (query) => {
         leftRole || (rightRole && rightRole.includes('_from') ? `${relationshipType}_to` : `${relationshipType}_from`);
       const roleForRight =
         rightRole || (leftRole && leftRole.includes('_to') ? `${relationshipType}_from` : `${relationshipType}_to`);
-      const lAlias = leftAlias.trim().replace('$', '');
+      const lAlias = leftAlias.trim();
       const lKeyFilter = getAliasInternalIdFilter(query, lAlias);
-      const rAlias = rightAlias.trim().replace('$', '');
+      const rAlias = rightAlias.trim()
       const rKeyFilter = getAliasInternalIdFilter(query, rAlias);
       // If one filtering key is specified, just return the duo with no roles
       if (lKeyFilter || rKeyFilter) {
@@ -437,9 +498,10 @@ export const queryAttributeValueByGraknId = async (id) => {
 };
 
 const resolveInternalIdOfConcept = async (tx, conceptId, internalIdAttribute) => {
-  const resolveConcept = await tx.getConcept(conceptId);
-  const roleConceptRemote = await (await resolveConcept.attributes(internalIdAttribute)).collect();
-  return R.head(roleConceptRemote).value();
+  const resolveConcept = await tx.concepts().getThing(conceptId);
+  const test = resolveConcept.asRemote(tx).getHas(internalIdAttribute);
+  const roleConceptRemote = await test.collect();
+  return R.head(roleConceptRemote).getValue();
 };
 /**
  * Load any grakn instance with internal grakn ID.
@@ -452,34 +514,35 @@ const loadConcept = async (tx, concept, args = {}) => {
   const { internalId } = args;
   const conceptBaseType = concept.baseType;
   // const types = await conceptTypes(tx, concept);
-  const remoteConceptType = await concept.type();
-  const conceptType = await remoteConceptType.label();
-  const internalIdAttribute = await tx.getSchemaConcept(ID_INTERNAL);
+  const remoteConcept = concept.asRemote(tx);
+  const remoteConceptType = await remoteConcept.getType();
+  const conceptType = remoteConceptType.getLabel();
+  const internalIdAttribute = await tx.concepts().getAttributeType(ID_INTERNAL);
   const index = inferIndexFromConceptType(conceptType);
   // 01. Return the data in elastic if not explicitly asked in grakn
   // eslint-disable-next-line no-underscore-dangle
   if (!concept._inferred && useCache(args)) {
     // Sometimes we already know the internal id because we specify it in the query.
-    const conceptInternalId = internalId || (await resolveInternalIdOfConcept(tx, concept.id, internalIdAttribute));
+    const conceptInternalId = internalId || (await resolveInternalIdOfConcept(tx, concept._iid, internalIdAttribute));
     const conceptFromCache = await elLoadByIds(conceptInternalId, null, [index]);
     if (!conceptFromCache) {
       /* istanbul ignore next */
       logger.info(`[ELASTIC] ${conceptInternalId} not indexed yet, loading with Grakn`);
     } else {
       // Need to associate the grakn id for result rebinding
-      return R.assoc('grakn_id', concept.id, conceptFromCache);
+      return R.assoc('grakn_id', concept._iid, conceptFromCache);
     }
   }
   // 02. If not found continue the process.
-  const attributesIterator = await concept.asRemote(tx).attributes();
+  const attributesIterator = remoteConcept.getHas();
   const attributes = await attributesIterator.collect();
   const attributesPromises = attributes.map(async (attribute) => {
-    const attributeType = await attribute.type();
-    const attributeLabel = await attributeType.label();
+    const attributeType = await attribute.asRemote(tx).getType();
+    const attributeLabel = await attributeType.getLabel();
     return {
-      dataType: await attributeType.valueType(),
+      dataType: await attributeType.getValueType(),
       label: attributeLabel,
-      value: await attribute.value(),
+      value: await attribute.getValue(),
     };
   });
   return Promise.all(attributesPromises)
@@ -514,7 +577,7 @@ const loadConcept = async (tx, concept, args = {}) => {
       return R.pipe(
         R.assoc('_index', index),
         R.assoc('id', transform.internal_id),
-        R.assoc('grakn_id', concept.id),
+        R.assoc('grakn_id', concept._iid),
         R.assoc('base_type', conceptBaseType),
         R.assoc('parent_types', transform.entity_type ? getParentTypes(transform.entity_type) : null)
       )(transform);
@@ -522,13 +585,13 @@ const loadConcept = async (tx, concept, args = {}) => {
     .then(async (entityData) => {
       if (entityData.base_type !== BASE_TYPE_RELATION) return entityData;
       const isInferredPromise = concept.isInferred();
-      const rolePlayers = await concept.asRemote(tx).rolePlayersMap();
+      const rolePlayers = await remoteConcept.getPlayers();
       const roleEntries = Array.from(rolePlayers.entries());
       const rolesPromises = Promise.all(
         R.map(async (roleItem) => {
           const targetRole = R.last(roleItem).values().next();
           const targetId = targetRole.value.id;
-          const roleInternalId = await resolveInternalIdOfConcept(tx, targetId, internalIdAttribute);
+          const roleInternalId = null; // await resolveInternalIdOfConcept(tx, targetId, internalIdAttribute);
           const remoteTargetType = await targetRole.value.type();
           const roleType = await remoteTargetType.label();
           // eslint-disable-next-line prettier/prettier
@@ -594,10 +657,10 @@ const getConcepts = async (tx, answers, conceptQueryVars, entities, conceptOpts 
           if (!concept || concept.baseType === 'ATTRIBUTE') return undefined; // If specific attributes are used for filtering, ordering, ...
           // If internal id of the element is not directly accessible
           // And the element is part of element needed for the result, ensure the key is asked in the query.
-          const conceptType = await concept.type();
-          const type = await conceptType.label();
+          const conceptType = await concept.asRemote(tx).getType();
+          const type = conceptType.getLabel();
           return {
-            id: concept.id,
+            id: concept._iid,
             internalId: internalIdKey,
             data: { concept, alias, role, type },
           };
@@ -618,7 +681,7 @@ const getConcepts = async (tx, answers, conceptQueryVars, entities, conceptOpts 
   // 03. Fetch every unique concepts
   const uniqConceptsLoading = R.pipe(
     R.flatten,
-    R.uniqBy((e) => e.concept.id),
+    R.uniqBy((e) => e.concept._iid),
     R.map((l) => loadConcept(tx, l.concept, { internalId: l.internalId, noCache, infer }))
   )(queryConcepts);
   const resolvedConcepts = await Promise.all(uniqConceptsLoading);
@@ -628,14 +691,15 @@ const getConcepts = async (tx, answers, conceptQueryVars, entities, conceptOpts 
   return answers.map((answer) => {
     const dataPerEntities = plainEntities.map((entity) => {
       const concept = answer.map().get(entity);
-      const conceptData = concept && conceptCache.get(concept.id);
-      return [entity, conceptData];
+      const conceptData = concept && conceptCache.get(concept._iid);
+      return [entity.replace('$', ''), conceptData];
     });
     return R.fromPairs(dataPerEntities);
   });
 };
 export const find = async (query, entities, findOpts = {}) => {
   // Remove empty values from entities
+  const mappedEntities = entities.map((e) => '$' + e);
   const { infer = false, paginationKey = null } = findOpts;
   return executeRead(async (rTx) => {
     const conceptQueryVars = extractQueryVars(query);
@@ -643,7 +707,7 @@ export const find = async (query, entities, findOpts = {}) => {
     const iterator = await rTx.query().match(query /* , { infer } */);
     // 01. Get every concepts to fetch (unique)
     const answers = await iterator.collect();
-    const data = await getConcepts(rTx, answers, conceptQueryVars, entities, findOpts);
+    const data = await getConcepts(rTx, answers, conceptQueryVars, mappedEntities, findOpts);
     if (paginationKey) {
       const edges = R.map((t) => ({ node: t[paginationKey] }), data);
       return buildPagination(0, 0, edges, edges.length);
