@@ -239,60 +239,6 @@ export const internalDirectWrite = async (query) => {
   }
 };
 
-export const graknBug = async () => {
-  const session = await client.session(OPENCTI_DATABASE, Grakn.SessionType.DATA);
-  const userInternalId = uuidv4();
-  const userStandardId = uuidv4();
-  // Insert a user
-  const wTx1 = await session.transaction(Grakn.TransactionType.WRITE);
-  await wTx1.query().insert(`insert $entity isa User, has internal_id "${userInternalId}", has standard_id "${userStandardId}", has user_email "admin@opencti.io";`);
-  await wTx1.commit();
-  // Insert a token
-  const tokenInternalId = uuidv4();
-  const tokenStandardId = uuidv4();
-  const tokenUUID = uuidv4();
-  const wTx2 = await session.transaction(Grakn.TransactionType.WRITE);
-  await wTx2.query().insert(`insert $entity isa Token, has internal_id "${tokenInternalId}", has standard_id "${tokenStandardId}", has uuid "${tokenUUID}", has name "Default", has revoked false;`);
-  await wTx2.commit();
-  // Create the relation
-  const relInternalId = uuidv4();
-  const relStandardId = uuidv4();
-  const wTx3 = await session.transaction(Grakn.TransactionType.WRITE);
-  await wTx3.query().insert(`match $from isa thing; $from has internal_id "${userInternalId}"; $to has internal_id "${tokenInternalId}"; insert $rel(authorized-by_from: $from, authorized-by_to: $to) isa authorized-by,has internal_id "${relInternalId}", has standard_id "${relStandardId}", has entity_type "authorized-by";`);
-  await wTx3.commit();
-  // Read check Token
-  const wTx4 = await session.transaction(Grakn.TransactionType.READ);
-  const iteratorToken = wTx4.query().match(`match $entity isa Token; $entity has internal_id "${tokenInternalId}";`);
-  const tokenAnswer = await iteratorToken.collect();
-  if (tokenAnswer.length !== 1) throw Error('cant find token');
-  console.log('tokenAnswer', tokenAnswer[0].map().get('$entity'));
-  await wTx4.close();
-  // Read check User
-  const wTx5 = await session.transaction(Grakn.TransactionType.READ);
-  const iteratorUser = wTx5.query().match(`match $entity isa User; $entity has standard_id "${userStandardId}";`);
-  const userAnswer = await iteratorUser.collect();
-  if (userAnswer.length !== 1) throw Error('cant find user');
-  console.log('userAnswer', userAnswer[0].map().get('$entity'));
-  await wTx5.close();
-  // Read the relation
-  const wTx6 = await session.transaction(Grakn.TransactionType.READ);
-  const iteratorRel1 = wTx6.query().match(`match $rel isa authorized-by;`);
-  const relAnswer1 = await iteratorRel1.collect();
-  if (relAnswer1.length !== 1) throw Error('cant find relation');
-  console.log('relAnswer1', relAnswer1[0].map().get('$rel'));
-  await wTx6.close();
-  // Read the relation
-  const wTx7 = await session.transaction(Grakn.TransactionType.READ);
-  const iteratorRel2 = wTx7.query().match(`match $token isa Token; $token has uuid "${tokenUUID}", has revoked false; (authorized-by_from:$client, authorized-by_to:$token) isa authorized-by;`);
-  const relAnswer2 = await iteratorRel2.collect();
-  if (relAnswer2.length !== 1) throw Error('cant find relation');
-  console.log('relAnswer', relAnswer2[0].map().get('$token'));
-  await wTx7.close();
-  // Close session
-  await session.close();
-};
-
-
 export const schemaDefineOperation = async (query) => {
   const existingDb = await client.databases().contains(OPENCTI_DATABASE);
   if (!existingDb) {
@@ -2186,7 +2132,7 @@ const buildRelationInsertQuery = (input) => {
   // 04. Create the relation
   const fromRole = `${relationshipType}_from`;
   const toRole = `${relationshipType}_to`;
-  let query = `match $from isa ${input.fromType ? input.fromType : 'thing'}; 
+  let query = `match ${input.fromType ? '$from isa ' + input.fromType + ';' : ''}
       $from has internal_id "${from.internal_id}"; $to has internal_id "${to.internal_id}";
       insert $rel(${fromRole}: $from, ${toRole}: $to) isa ${relationshipType},`;
   const queryElements = flatAttributesForObject(relationAttributes);
@@ -2429,7 +2375,7 @@ const createRelationRaw = async (wTx, user, input) => {
   const fromRole = `${relationshipType}_from`;
   const toRole = `${relationshipType}_to`;
   // Build final query
-  let query = `match $from isa ${input.fromType ? input.fromType : 'thing'}; 
+  let query = `match ${input.fromType ? '$from isa ' + input.fromType + ';' : ''} 
       $from has internal_id "${from.internal_id}"; $to has internal_id "${to.internal_id}";
       insert $rel(${fromRole}: $from, ${toRole}: $to) isa ${relationshipType},`;
   const queryElements = flatAttributesForObject(data);
@@ -2816,7 +2762,7 @@ export const deleteRelationsByFromAndTo = async (user, fromId, toId, relationshi
 };
 export const deleteAttributeById = async (id) => {
   return executeWrite(async (wTx) => {
-    const query = `match $x id ${escape(id)}; delete $x isa thing;`;
+    const query = `match $x id ${escape(id)}; delete $x;`;
     logger.debug(`[GRAKN - infer: false] deleteAttributeById`, { query });
     await wTx.query().delete(query);
     return id;
