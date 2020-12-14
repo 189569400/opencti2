@@ -1620,7 +1620,7 @@ const innerUpdateAttribute = async (user, instance, rawInput, wTx, options = {})
   const labelIterator = await wTx.query().match(labelTypeQuery);
   const labelAnswer = await labelIterator.next();
   // eslint-disable-next-line prettier/prettier
-  const ansConcept = labelAnswer.map().get('x');
+  const ansConcept = labelAnswer.map().get('$x');
   const attrType = await ansConcept.asRemote(wTx).valueType();
   const typedValues = R.map((v) => {
     if (isDictionaryAttribute(input.key)) return `"${escapeString(JSON.stringify(v))}"`;
