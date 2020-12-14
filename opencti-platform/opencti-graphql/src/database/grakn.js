@@ -288,7 +288,7 @@ const getAliasInternalIdFilter = (query, alias) => {
  * @param query
  */
 export const extractQueryVars = (query) => {
-  const vars = R.uniq(R.map((m) => ({ alias: m }), query.match(/\$[a-z_]+/gi)));
+  const vars = R.uniq(R.map((m) => ({ alias: m.replace('$', '') }), query.match(/\$[a-z_]+/gi)));
   const varWithKey = R.map((v) => ({ alias: v.alias, internalIdKey: getAliasInternalIdFilter(query, v.alias) }), vars);
   const relationsVars = Array.from(query.matchAll(/\(([a-z_\-\s:$]+),([a-z_\-\s:$]+)\)[\s]*isa[\s]*([a-z_-]+)/g));
   const roles = R.flatten(
@@ -300,9 +300,9 @@ export const extractQueryVars = (query) => {
         leftRole || (rightRole && rightRole.includes('_from') ? `${relationshipType}_to` : `${relationshipType}_from`);
       const roleForRight =
         rightRole || (leftRole && leftRole.includes('_to') ? `${relationshipType}_from` : `${relationshipType}_to`);
-      const lAlias = leftAlias.trim();
+      const lAlias = leftAlias.trim().replace('$', '');
       const lKeyFilter = getAliasInternalIdFilter(query, lAlias);
-      const rAlias = rightAlias.trim()
+      const rAlias = rightAlias.trim().replace('$', '');
       const rKeyFilter = getAliasInternalIdFilter(query, rAlias);
       // If one filtering key is specified, just return the duo with no roles
       if (lKeyFilter || rKeyFilter) {
@@ -638,14 +638,13 @@ const getConcepts = async (tx, answers, conceptQueryVars, entities, conceptOpts 
     const dataPerEntities = plainEntities.map((entity) => {
       const concept = answer.map().get(entity);
       const conceptData = concept && conceptCache.get(concept._iid);
-      return [entity.replace('$', ''), conceptData];
+      return [entity, conceptData];
     });
     return R.fromPairs(dataPerEntities);
   });
 };
 export const find = async (query, entities, findOpts = {}) => {
   // Remove empty values from entities
-  const mappedEntities = entities.map((e) => '$' + e);
   const { infer = false, paginationKey = null } = findOpts;
   return executeRead(async (rTx) => {
     const conceptQueryVars = extractQueryVars(query);
@@ -653,7 +652,7 @@ export const find = async (query, entities, findOpts = {}) => {
     const iterator = await rTx.query().match(query /* , { infer } */);
     // 01. Get every concepts to fetch (unique)
     const answers = await iterator.collect();
-    const data = await getConcepts(rTx, answers, conceptQueryVars, mappedEntities, findOpts);
+    const data = await getConcepts(rTx, answers, conceptQueryVars, entities, findOpts);
     if (paginationKey) {
       const edges = R.map((t) => ({ node: t[paginationKey] }), data);
       return buildPagination(0, 0, edges, edges.length);
@@ -1620,7 +1619,7 @@ const innerUpdateAttribute = async (user, instance, rawInput, wTx, options = {})
   const labelIterator = await wTx.query().match(labelTypeQuery);
   const labelAnswer = await labelIterator.next();
   // eslint-disable-next-line prettier/prettier
-  const ansConcept = labelAnswer.map().get('$x');
+  const ansConcept = labelAnswer.map().get('x');
   const attrType = await ansConcept.asRemote(wTx).getValueType();
   const typedValues = R.map((v) => {
     if (isDictionaryAttribute(input.key)) return `"${escapeString(JSON.stringify(v))}"`;

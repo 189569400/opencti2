@@ -32,7 +32,7 @@ export const addAttribute = async (attribute) => {
     const attributeIterator = wTx.query().insert(query);
     const createdAttribute = await attributeIterator.next();
     // eslint-disable-next-line no-underscore-dangle
-    const createdAttributeId = createdAttribute.map().get('$attribute')._iid;
+    const createdAttributeId = createdAttribute.map().get('attribute')._iid;
     return {
       id: createdAttributeId,
       type: attribute.type,
