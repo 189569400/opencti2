@@ -53,10 +53,10 @@ export const reportsNumber = (args) => ({
   count: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_REPORT};
    ${args.reportClass ? `; $x has report_class "${escapeString(args.reportClass)}"` : ''} 
    ${args.endDate ? `$x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''}
-   get; count;`),
+   count;`),
   total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_REPORT};
     ${args.reportClass ? `; $x has report_class "${escapeString(args.reportClass)}"` : ''}
-    get; count;`),
+    count;`),
 });
 
 export const reportsTimeSeriesByEntity = (args) => {
@@ -78,7 +78,6 @@ export const reportsNumberByEntity = (args) => ({
     $to has internal_id "${escapeString(args.objectId)}"; 
     ${args.reportType ? `$to has report_types "${escapeString(args.reportType)};"` : ''}
     ${args.endDate ? `$to has created_at $date; $date < ${prepareDate(args.endDate)};` : ''}
-    get;
     count;`
   ),
   total: getSingleValueNumber(
@@ -86,7 +85,6 @@ export const reportsNumberByEntity = (args) => ({
     $rel(${RELATION_OBJECT}_from:$from, ${RELATION_OBJECT}_to:$to) isa ${RELATION_OBJECT};
     $to has internal_id "${escapeString(args.objectId)}";
     ${args.reportType ? `$x has report_class "${escapeString(args.reportType)};"` : ''}
-    get;
     count;`
   ),
 });

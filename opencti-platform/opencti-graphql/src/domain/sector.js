@@ -36,7 +36,7 @@ export const isSubSector = async (sectorId) => {
   const numberOfParents = await getSingleValueNumber(
     `match $parent isa ${ENTITY_TYPE_IDENTITY_SECTOR}; 
     $rel(${RELATION_PART_OF}_from:$subsector, ${RELATION_PART_OF}_to:$parent) isa ${RELATION_PART_OF}; 
-    $subsector has internal_id "${escapeString(sectorId)}"; get; count;`
+    $subsector has internal_id "${escapeString(sectorId)}"; count;`
   );
   return numberOfParents > 0;
 };
@@ -46,8 +46,8 @@ export const targetedOrganizations = async (sectorId) =>
     `match $sector has internal_id "${escapeString(sectorId)}";
     $organization isa Organization;
     ($organization, $sector) isa ${RELATION_PART_OF}; 
-  $rel($threat, $organization) isa ${RELATION_TARGETS}, has start_time $order;
-  get; sort $order desc;`,
+      $rel($threat, $organization) isa ${RELATION_TARGETS}, has start_time $order;
+      sort $order desc;`,
     ['rel']
   ).then((data) =>
     buildPagination(

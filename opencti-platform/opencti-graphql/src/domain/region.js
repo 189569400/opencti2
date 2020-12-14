@@ -39,7 +39,7 @@ export const isSubRegion = async (regionId) => {
     `match $parent isa Region; 
     $rel(${RELATION_LOCATED_AT}_from:$subregion, ${RELATION_LOCATED_AT}_to:$parent) isa ${RELATION_LOCATED_AT}; 
     $subregion has internal_id "${escapeString(regionId)}"; 
-    get; count;`
+    count;`
   );
   return numberOfParents > 0;
 };

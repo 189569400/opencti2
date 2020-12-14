@@ -37,7 +37,7 @@ const indexElement = async (type, isRelation = false, fromType = null, toType = 
   let typeSuffix = fromType ? `$from isa ${fromType};` : '';
   typeSuffix += toType ? `$to isa ${toType};` : '';
 
-  const nbOfEntities = await getSingleValueNumber(`match ${matchingQuery} isa ${type}; ${typeSuffix} get; count;`);
+  const nbOfEntities = await getSingleValueNumber(`match ${matchingQuery} isa ${type}; ${typeSuffix} count;`);
   if (nbOfEntities === 0) return;
   // Compute the number of groups to create
   let counter = 0;
@@ -48,7 +48,7 @@ const indexElement = async (type, isRelation = false, fromType = null, toType = 
   const queries = [];
   for (let index = 0; index < nbGroup; index += 1) {
     const offset = index * GROUP_NUMBER;
-    const query = `match ${matchingQuery} isa ${type}; ${typeSuffix} get; offset ${offset}; limit ${GROUP_NUMBER};`;
+    const query = `match ${matchingQuery} isa ${type}; ${typeSuffix} offset ${offset}; limit ${GROUP_NUMBER};`;
     queries.push(query);
   }
   // Fetch grakn with concurrency limit.

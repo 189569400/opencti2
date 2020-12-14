@@ -54,9 +54,9 @@ export const workspacesNumber = (args) => {
     count: getSingleValueNumber(
       `match $x isa ${ENTITY_TYPE_WORKSPACE}; ${
         args.endDate ? `$x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
-      } get; count;`
+      } count;`
     ),
-    total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_WORKSPACE}; get; count;`),
+    total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_WORKSPACE}; count;`),
   };
 };
 // endregion

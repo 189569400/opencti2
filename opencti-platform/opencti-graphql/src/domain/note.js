@@ -42,11 +42,9 @@ export const notesTimeSeries = (args) => {
 
 export const notesNumber = (args) => ({
   count: getSingleValueNumber(
-    `match $x isa Note; ${
-      args.endDate ? `$x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
-    } get; count;`
+    `match $x isa Note; ${args.endDate ? `$x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''} count;`
   ),
-  total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_NOTE}; get; count;`),
+  total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_NOTE}; count;`),
 });
 
 export const notesTimeSeriesByEntity = (args) => {
@@ -75,14 +73,12 @@ export const notesNumberByEntity = (args) => ({
     $so has internal_id "${escapeString(args.objectId)}" ${
       args.endDate ? `; $x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
     }
-    get;
     count;`
   ),
   total: getSingleValueNumber(
     `match $x isa ${ENTITY_TYPE_CONTAINER_NOTE};
     $rel(${RELATION_OBJECT}_from:$x, ${RELATION_OBJECT}_to:$so) isa ${RELATION_OBJECT}; 
     $so has internal_id "${escapeString(args.objectId)}";
-    get;
     count;`
   ),
 });

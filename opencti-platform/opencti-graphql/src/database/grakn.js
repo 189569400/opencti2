@@ -1,10 +1,10 @@
 /* eslint-disable */
 import moment from 'moment';
-import { cursorToOffset } from 'graphql-relay/lib/connection/arrayconnection';
-import { Grakn } from 'grakn-client/Grakn';
-import { GraknClient } from 'grakn-client/rpc/GraknClient';
+import {cursorToOffset} from 'graphql-relay/lib/connection/arrayconnection';
+import {Grakn} from 'grakn-client/Grakn';
+import {GraknClient} from 'grakn-client/rpc/GraknClient';
 import * as R from 'ramda';
-import { __ } from 'ramda';
+import {__} from 'ramda';
 import DataLoader from 'dataloader';
 import {
   DatabaseError,
@@ -14,7 +14,7 @@ import {
   TYPE_LOCK_ERROR,
   UnsupportedError,
 } from '../config/errors';
-import conf, { BUS_TOPICS, logger } from '../config/conf';
+import conf, {BUS_TOPICS, logger} from '../config/conf';
 import {
   buildPagination,
   fillTimeSeries,
@@ -52,8 +52,8 @@ import {
   normalizeName,
   X_MITRE_ID_FIELD,
 } from '../schema/identifier';
-import { lockResource, notify, storeCreateEvent, storeDeleteEvent, storeMergeEvent, storeUpdateEvent } from './redis';
-import { buildStixData, cleanStixIds, STIX_SPEC_VERSION } from './stix';
+import {lockResource, notify, storeCreateEvent, storeDeleteEvent, storeMergeEvent, storeUpdateEvent} from './redis';
+import {buildStixData, cleanStixIds, STIX_SPEC_VERSION} from './stix';
 import {
   ABSTRACT_BASIC_RELATIONSHIP,
   ABSTRACT_STIX_CORE_OBJECT,
@@ -67,8 +67,8 @@ import {
   isAbstract,
   REL_INDEX_PREFIX,
 } from '../schema/general';
-import { getParentTypes, isAnId } from '../schema/schemaUtils';
-import { isStixCyberObservableRelationship } from '../schema/stixCyberObservableRelationship';
+import {getParentTypes, isAnId} from '../schema/schemaUtils';
+import {isStixCyberObservableRelationship} from '../schema/stixCyberObservableRelationship';
 import {
   isStixMetaRelationship,
   RELATION_CREATED_BY,
@@ -78,9 +78,9 @@ import {
   RELATION_OBJECT_LABEL,
   RELATION_OBJECT_MARKING,
 } from '../schema/stixMetaRelationship';
-import { isDatedInternalObject } from '../schema/internalObject';
-import { isStixCoreObject, isStixObject } from '../schema/stixCoreObject';
-import { isStixRelationShipExceptMeta } from '../schema/stixRelationship';
+import {isDatedInternalObject} from '../schema/internalObject';
+import {isStixCoreObject, isStixObject} from '../schema/stixCoreObject';
+import {isStixRelationShipExceptMeta} from '../schema/stixRelationship';
 import {
   dictAttributes,
   isDictionaryAttribute,
@@ -88,7 +88,7 @@ import {
   multipleAttributes,
   statsDateAttributes,
 } from '../schema/fieldDataAdapter';
-import { isStixCoreRelationship } from '../schema/stixCoreRelationship';
+import {isStixCoreRelationship} from '../schema/stixCoreRelationship';
 import {
   ATTRIBUTE_ALIASES,
   ATTRIBUTE_ALIASES_OPENCTI,
@@ -99,10 +99,9 @@ import {
   resolveAliasesField,
   stixDomainObjectFieldsToBeUpdated,
 } from '../schema/stixDomainObject';
-import { ENTITY_TYPE_LABEL, isStixMetaObject } from '../schema/stixMetaObject';
-import { isStixSightingRelationship } from '../schema/stixSightingRelationship';
-import { isStixCyberObservable } from '../schema/stixCyberObservableObject';
-import {uuidv4} from "grakn-client/dependencies_internal";
+import {ENTITY_TYPE_LABEL, isStixMetaObject} from '../schema/stixMetaObject';
+import {isStixSightingRelationship} from '../schema/stixSightingRelationship';
+import {isStixCyberObservable} from '../schema/stixCyberObservableObject';
 
 // region global variables
 export const MAX_BATCH_SIZE = 25;
@@ -271,6 +270,7 @@ export const graknInit = async () => {
   //       throw DatabaseError('Grakn seems down', { error: e });
   //     }
   //   );
+  return true;
 };
 export const getGraknVersion = () => {
   // It seems that Grakn server does not expose its version yet:
@@ -350,7 +350,7 @@ export const querySubTypes = async (type, includeParents = false) => {
     const result = await Promise.all(
       answers.map(async (answer) => {
         const subType = answer.map().get('x');
-        const subTypeLabel = await subType.label();
+        const subTypeLabel = await subType.getLabel();
         return {
           id: subType.id,
           label: subTypeLabel,
@@ -400,13 +400,13 @@ export const queryAttributeValues = async (type) => {
     const result = await Promise.all(
       answers.map(async (answer) => {
         const attribute = answer.map().get('x');
-        const attributeType = await attribute.type();
-        const value = await attribute.value();
-        const attributeTypeLabel = await attributeType.label();
+        const attributeType = await attribute.asRemote(rTx).getType();
+        const value = await attribute.getValue();
+        const attributeTypeLabel = await attributeType.getLabel();
         const replacedValue = typeof value === 'string' ? value.replace(/\\"/g, '"').replace(/\\\\/g, '\\') : value;
         return {
           node: {
-            id: attribute.id,
+            id: attribute._iid,
             type: attributeTypeLabel,
             value: replacedValue,
           },
@@ -420,13 +420,17 @@ export const attributeExists = async (attributeLabel) => {
   return executeRead(async (rTx) => {
     const checkQuery = `match $x sub ${attributeLabel};`;
     logger.debug(`[GRAKN - infer: false] attributeExists`, { query: checkQuery });
-    await rTx.query().match(checkQuery);
+    const iterator = rTx.query().match(checkQuery);
+    const test = await iterator.collect();
     return true;
-  }).catch(() => false);
+  }).catch((error) => {
+    console.log(error);
+    return false;
+  });
 };
 export const queryAttributeValueByGraknId = async (id) => {
   return executeRead(async (rTx) => {
-    const query = `match $x id ${escape(id)};`;
+    const query = `match $x iid ${escape(id)};`;
     logger.debug(`[GRAKN - infer: false] queryAttributeValueById`, { query });
     const iterator = await rTx.query().match(query);
     const answer = await iterator.next();
@@ -643,6 +647,26 @@ const getConcepts = async (tx, answers, conceptQueryVars, entities, conceptOpts 
     return R.fromPairs(dataPerEntities);
   });
 };
+export const testingFind = async (query) => {
+  // Remove empty values from entities
+  return executeRead(async (rTx) => {
+    const iterator = await rTx.query().match(query /* , { infer } */);
+    // 01. Get every concepts to fetch (unique)
+    const answers = await iterator.collect();
+    const test = answers.map((answer) => {
+      const concept = answer.get('a');
+      const type = answer.get('t');
+      const entityId = answer.get('m')._iid;
+      const t = type.getLabel();
+      return { id: entityId, [t]: concept.getValue() };
+    });
+    const grouped = R.groupBy((s) => s.id, test);
+    const toPairs = R.toPairs(grouped);
+    return toPairs.map(([, values]) => {
+      return R.mergeAll(values);
+    });
+  });
+};
 export const find = async (query, entities, findOpts = {}) => {
   // Remove empty values from entities
   const { infer = false, paginationKey = null } = findOpts;
@@ -756,17 +780,17 @@ export const listFromEntitiesThroughRelation = (toId, toType, relationType, from
 };
 export const listElements = async (baseQuery, elementKey, first, offset, args) => {
   const { orderBy = null, orderMode = 'asc', inferred = false, noCache = false, connectionFormat = true } = args;
-  const countQuery = `${baseQuery} count;`;
+  // const countQuery = `${baseQuery} count;`;
   const paginateQuery = `offset ${offset}; limit ${first};`;
   const orderQuery = orderBy ? `sort $order ${orderMode};` : '';
   const query = `${baseQuery} ${orderQuery} ${paginateQuery}`;
-  const countPromise = getSingleValueNumber(countQuery, inferred);
+  // const countPromise = getSingleValueNumber(countQuery, inferred);
   const findOpts = { infer: inferred, noCache };
   const instancesPromise = find(query, [elementKey], findOpts);
-  return Promise.all([instancesPromise, countPromise]).then(([instances, globalCount]) => {
+  return Promise.all([instancesPromise]).then(([instances]) => {
     if (!connectionFormat) return R.map((t) => t[elementKey], instances);
     const edges = R.map((t) => ({ node: t[elementKey] }), instances);
-    return buildPagination(first, offset, edges, globalCount);
+    return buildPagination(first, offset, edges, 0);
   });
 };
 export const listEntities = async (entityTypes, searchFields, args = {}) => {
@@ -869,8 +893,9 @@ export const listEntities = async (entityTypes, searchFields, args = {}) => {
           R.concat(__, ';')
         )(entityTypes)
       : '';
-  const baseQuery = `match $elem isa ${headType}, has internal_id $elem_id; ${extraTypes} ${queryRelationsFields} 
-                      ${queryAttributesFields} ${queryAttributesFilters} get;`;
+  const baseQuery = `match $elem ${entityTypes.length <= 1 ? 'isa '+ headType + ',' : ''} 
+                      has internal_id $elem_id; ${extraTypes} ${queryRelationsFields} 
+                      ${queryAttributesFields} ${queryAttributesFilters}`;
   return listElements(baseQuery, 'elem', first, offset, args);
 };
 export const listRelations = async (relationshipType, args) => {
@@ -1093,7 +1118,7 @@ export const listRelations = async (relationshipType, args) => {
       : '$rel';
   }
   const baseQuery = `match ${querySource} isa ${relationToGet}; 
-  ${queryFromTypes} ${queryToTypes} ${queryRelationsFields} ${queryAttributesFields} ${queryAttributesFilters} get;`;
+  ${queryFromTypes} ${queryToTypes} ${queryRelationsFields} ${queryAttributesFields} ${queryAttributesFilters}`;
   const listArgs = R.assoc('inferred', useInference, args);
   return listElements(baseQuery, 'rel', first, offset, listArgs);
 };
@@ -1273,7 +1298,7 @@ const buildAggregationQuery = (entityType, filters, options) => {
     R.join('')
   )(filters);
   const groupField = interval ? `i_${field}_${interval}` : field;
-  const groupingQuery = `$from has ${groupField} $g; get; group $g; ${operation};`;
+  const groupingQuery = `$from has ${groupField} $g; group $g; ${operation};`;
   return `${baseQuery} ${filterQuery} ${groupingQuery}`;
 };
 const graknTimeSeries = (query, keyRef, valueRef, inferred) => {
@@ -1322,7 +1347,7 @@ export const timeSeriesRelations = async (options) => {
     const query = `match $x ${fromId ? '($from)' : ''} isa ${entityType}; ${
       fromId ? `$from has internal_id "${escapeString(fromId)}";` : ''
     }`;
-    const finalQuery = `${query} $x has i_${field}_${interval} $g; get; group $g; ${operation};`;
+    const finalQuery = `${query} $x has i_${field}_${interval} $g; group $g; ${operation};`;
     histogramData = await graknTimeSeries(finalQuery, 'date', 'value', inferred);
   }
   return fillTimeSeries(startDate, endDate, interval, histogramData);
@@ -1393,7 +1418,7 @@ export const distributionRelations = async (options) => {
         ? `$rel has ${finalDateAttribute} $fs; $fs > ${prepareDate(startDate)}; $fs < ${prepareDate(endDate)};`
         : ''
     }
-      $to has ${escape(field)} $g; get; group $g; ${escape(operation)};`;
+      $to has ${escape(field)} $g; group $g; ${escape(operation)};`;
     distributionData = await graknTimeSeries(query, 'label', 'value', inferred);
   }
   // Take a maximum amount of distribution depending on the ordering.
@@ -1417,7 +1442,7 @@ export const distributionEntitiesThroughRelations = async (options) => {
   let query = `match $rel($from, $to) isa ${relationshipType}; ${queryToTypes}`;
   query += `$from has internal_id "${escapeString(fromId)}";`;
   query += `$rel2($to, $to2) isa ${remoteRelationshipType};`;
-  query += `$to2 has ${escape(field)} $g; get; group $g; ${escape(operation)};`;
+  query += `$to2 has ${escape(field)} $g; group $g; ${escape(operation)};`;
   const distributionData = await graknTimeSeries(query, 'label', 'value', inferred);
   // Take a maximum amount of distribution depending on the ordering.
   const orderingFunction = order === 'asc' ? R.ascend : R.descend;

@@ -45,9 +45,9 @@ export const opinionsNumber = (args) => ({
   count: getSingleValueNumber(
     `match $x isa ${ENTITY_TYPE_CONTAINER_OPINION}; ${
       args.endDate ? `$x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
-    } get; count;`
+    } count;`
   ),
-  total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_OPINION}; get; count;`),
+  total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_OPINION}; count;`),
 });
 
 export const opinionsTimeSeriesByEntity = (args) => {
@@ -76,14 +76,12 @@ export const opinionsNumberByEntity = (args) => ({
     $so has internal_id "${escapeString(args.objectId)}" ${
       args.endDate ? `; $x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
     }
-    get;
     count;`
   ),
   total: getSingleValueNumber(
     `match $x isa ${ENTITY_TYPE_CONTAINER_OPINION};
     $rel(${RELATION_OBJECT}_from:$x, ${RELATION_OBJECT}_to:$so) isa ${RELATION_OBJECT}; 
     $so has internal_id "${escapeString(args.objectId)}";
-    get;
     count;`
   ),
 });

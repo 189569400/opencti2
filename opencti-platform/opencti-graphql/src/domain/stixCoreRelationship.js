@@ -76,7 +76,7 @@ export const createdBy = async (stixCoreRelationshipId) => {
   const element = await load(
     `match $to isa ${ENTITY_TYPE_IDENTITY}; 
     $rel(${RELATION_CREATED_BY}_from:$from, ${RELATION_CREATED_BY}_to: $to) isa ${RELATION_CREATED_BY};
-    $from has internal_id "${escapeString(stixCoreRelationshipId)}"; get;`,
+    $from has internal_id "${escapeString(stixCoreRelationshipId)}";`,
     ['to']
   );
   return element && element.to;

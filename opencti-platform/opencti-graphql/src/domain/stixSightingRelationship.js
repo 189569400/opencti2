@@ -53,13 +53,13 @@ export const stixSightingRelationshipsNumber = (args) => ({
   count: getSingleValueNumber(
     `match $x($y, $z) isa ${STIX_SIGHTING_RELATIONSHIP}; ${
       args.endDate ? `$x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
-    } ${args.fromId ? `$y has internal_id "${escapeString(args.fromId)}";` : ''} get; count;`,
+    } ${args.fromId ? `$y has internal_id "${escapeString(args.fromId)}";` : ''} count;`,
     args.inferred ? args.inferred : false
   ),
   total: getSingleValueNumber(
     `match $x($y, $z) isa ${STIX_SIGHTING_RELATIONSHIP}; ${
       args.fromId ? `$y has internal_id "${escapeString(args.fromId)}";` : ''
-    } get; count;`,
+    } count;`,
     args.inferred ? args.inferred : false
   ),
 });
@@ -68,7 +68,7 @@ export const createdBy = async (stixSightingRelationshipId) => {
   const element = await load(
     `match $to isa ${ENTITY_TYPE_IDENTITY}; 
     $rel(${RELATION_CREATED_BY}_from:$from, ${RELATION_CREATED_BY}_to: $to) isa ${RELATION_CREATED_BY};
-    $from has internal_id "${escapeString(stixSightingRelationshipId)}"; get;`,
+    $from has internal_id "${escapeString(stixSightingRelationshipId)}";`,
     ['to']
   );
   return element && element.to;

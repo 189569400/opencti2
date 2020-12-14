@@ -45,9 +45,9 @@ export const observedDatasNumber = (args) => ({
   count: getSingleValueNumber(
     `match $x isa ObservedData; ${
       args.endDate ? `$x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
-    } get; count;`
+    } count;`
   ),
-  total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_OBSERVED_DATA}; get; count;`),
+  total: getSingleValueNumber(`match $x isa ${ENTITY_TYPE_CONTAINER_OBSERVED_DATA}; count;`),
 });
 
 export const observedDatasTimeSeriesByEntity = (args) => {
@@ -76,14 +76,12 @@ export const observedDatasNumberByEntity = (args) => ({
     $so has internal_id "${escapeString(args.objectId)}" ${
       args.endDate ? `; $x has created_at $date; $date < ${prepareDate(args.endDate)};` : ''
     }
-    get;
     count;`
   ),
   total: getSingleValueNumber(
     `match $x isa ${ENTITY_TYPE_CONTAINER_OBSERVED_DATA};
     $rel(${RELATION_OBJECT}_from:$x, ${RELATION_OBJECT}_to:$so) isa ${RELATION_OBJECT}; 
     $so has internal_id "${escapeString(args.objectId)}";
-    get;
     count;`
   ),
 });

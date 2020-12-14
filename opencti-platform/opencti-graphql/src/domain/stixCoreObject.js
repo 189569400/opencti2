@@ -67,16 +67,6 @@ export const batchCreatedBy = async (stixCoreObjectId) => {
   return batchCreators.map((b) => (b.edges.length > 0 ? R.head(b.edges).node : null));
 };
 
-// export const createdBy = async (stixCoreObjectId) => {
-//   const element = await load(
-//     `match $to isa ${ENTITY_TYPE_IDENTITY};
-//     $rel(${RELATION_CREATED_BY}_from:$from, ${RELATION_CREATED_BY}_to: $to) isa ${RELATION_CREATED_BY};
-//     $from has internal_id "${escapeString(stixCoreObjectId)}"; get;`,
-//     ['to']
-//   );
-//   return element && element.to;
-// };
-
 export const reports = async (stixCoreObjectId) => {
   return listFromEntitiesThroughRelation(stixCoreObjectId, null, RELATION_OBJECT, ENTITY_TYPE_CONTAINER_REPORT);
 };
