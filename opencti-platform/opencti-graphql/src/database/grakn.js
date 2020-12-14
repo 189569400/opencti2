@@ -111,8 +111,8 @@ export const FROM_START_STR = '1970-01-01T00:00:00.000Z';
 export const UNTIL_END = 100000000000000;
 export const UNTIL_END_STR = '5138-11-16T09:46:40.000Z';
 const dateFormat = 'YYYY-MM-DDTHH:mm:ss.SSS';
-const GraknString = 'String';
-const GraknDate = 'Datetime';
+const GraknString = 'STRING';
+const GraknDate = 'DATETIME';
 
 export const REL_CONNECTED_SUFFIX = 'CONNECTED';
 const INFERRED_RELATION_KEY = 'rel';
@@ -1621,7 +1621,7 @@ const innerUpdateAttribute = async (user, instance, rawInput, wTx, options = {})
   const labelAnswer = await labelIterator.next();
   // eslint-disable-next-line prettier/prettier
   const ansConcept = labelAnswer.map().get('$x');
-  const attrType = await ansConcept.asRemote(wTx).valueType();
+  const attrType = await ansConcept.asRemote(wTx).getValueType();
   const typedValues = R.map((v) => {
     if (isDictionaryAttribute(input.key)) return `"${escapeString(JSON.stringify(v))}"`;
     if (attrType === GraknString) return `"${escapeString(v)}"`;
