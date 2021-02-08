@@ -1761,6 +1761,11 @@ export const createRelations = async (user, inputs) => {
 // endregion
 
 // region mutation entity
+interface CreateEntityResult {
+  type: string;
+  element: StixObject;
+  relations: string;
+}
 const createEntityRaw = async (user, standardId, participantIds, input, type) => {
   // Generate the internal id if needed
   const internalId = input.internal_id || generateInternalId();

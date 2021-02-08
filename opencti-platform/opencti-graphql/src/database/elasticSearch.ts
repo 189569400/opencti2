@@ -1,7 +1,8 @@
 /* eslint-disable no-underscore-dangle */
-import { Client } from '@elastic/elasticsearch';
+import { Client, ApiResponse, RequestParams } from '@elastic/elasticsearch';
 import { Promise } from 'bluebird';
 import * as R from 'ramda';
+import { RequestBody } from '@elastic/elasticsearch/lib/Transport';
 import {
   buildPagination,
   cursorToOffset,
@@ -46,6 +47,7 @@ import { isStixObject } from '../schema/stixCoreObject';
 import { isBasicRelationship } from '../schema/stixRelationship';
 import { RELATION_INDICATES } from '../schema/stixCoreRelationship';
 import { INTERNAL_FROM_FIELD, INTERNAL_TO_FIELD } from '../schema/identifier';
+import { StixObject } from '../schema/model';
 
 const MIN_DATA_FIELDS = ['name', 'internal_id', 'standard_id', 'base_type', 'entity_type', 'connections'];
 export const ES_MAX_CONCURRENCY = 5;
@@ -142,161 +144,159 @@ export const elIndexExists = async (indexName) => {
 export const elCreateIndexes = async (indexesToCreate = PLATFORM_INDICES) => {
   const defaultIndexPattern = conf.get('elasticsearch:index_creation_pattern');
   return Promise.all(
-    indexesToCreate.map((index) => {
-      return el.indices.exists({ index }).then((result) => {
-        if (result.body === false) {
-          return el.indices
-            .create({
-              index: `${index}${defaultIndexPattern}`,
-              body: {
-                aliases: { [index]: {} },
-                settings: {
-                  index: {
-                    max_result_window: 100000,
-                  },
-                  analysis: {
-                    normalizer: {
-                      string_normalizer: {
-                        type: 'custom',
-                        filter: ['lowercase', 'asciifolding'],
-                      },
-                    },
-                  },
+    indexesToCreate.map(async (index) => {
+      const isIndexExist = await el.indices.exists({ index });
+      if (isIndexExist.body === false) {
+        return el.indices
+          .create({
+            index: `${index}${defaultIndexPattern}`,
+            body: {
+              aliases: { [index]: {} },
+              settings: {
+                index: {
+                  max_result_window: 100000,
                 },
-                mappings: {
-                  dynamic_templates: [
-                    {
-                      integers: {
-                        match_mapping_type: 'long',
-                        mapping: {
-                          type: 'integer',
-                        },
-                      },
-                    },
-                    {
-                      strings: {
-                        match_mapping_type: 'string',
-                        mapping: {
-                          type: 'text',
-                          fields: {
-                            keyword: {
-                              type: 'keyword',
-                              normalizer: 'string_normalizer',
-                              ignore_above: 512,
-                            },
-                          },
-                        },
-                      },
-                    },
-                  ],
-                  properties: {
-                    timestamp: {
-                      type: 'date',
-                    },
-                    created: {
-                      type: 'date',
-                    },
-                    modified: {
-                      type: 'date',
-                    },
-                    first_seen: {
-                      type: 'date',
-                    },
-                    last_seen: {
-                      type: 'date',
-                    },
-                    start_time: {
-                      type: 'date',
-                    },
-                    stop_time: {
-                      type: 'date',
-                    },
-                    published: {
-                      type: 'date',
-                    },
-                    valid_from: {
-                      type: 'date',
-                    },
-                    valid_until: {
-                      type: 'date',
-                    },
-                    observable_date: {
-                      type: 'date',
-                    },
-                    event_date: {
-                      type: 'date',
-                    },
-                    received_time: {
-                      type: 'date',
-                    },
-                    processed_time: {
-                      type: 'date',
-                    },
-                    completed_time: {
-                      type: 'date',
-                    },
-                    ctime: {
-                      type: 'date',
-                    },
-                    mtime: {
-                      type: 'date',
-                    },
-                    atime: {
-                      type: 'date',
-                    },
-                    confidence: {
-                      type: 'integer',
-                    },
-                    x_opencti_report_status: {
-                      type: 'integer',
-                    },
-                    attribute_order: {
-                      type: 'integer',
-                    },
-                    base_score: {
-                      type: 'integer',
-                    },
-                    is_family: {
-                      type: 'boolean',
-                    },
-                    number_observed: {
-                      type: 'integer',
-                    },
-                    x_opencti_negative: {
-                      type: 'boolean',
-                    },
-                    default_assignation: {
-                      type: 'boolean',
-                    },
-                    x_opencti_detection: {
-                      type: 'boolean',
-                    },
-                    x_opencti_order: {
-                      type: 'integer',
-                    },
-                    import_expected_number: {
-                      type: 'integer',
-                    },
-                    import_processed_number: {
-                      type: 'integer',
-                    },
-                    x_opencti_score: {
-                      type: 'integer',
-                    },
-                    connections: {
-                      type: 'nested',
+                analysis: {
+                  normalizer: {
+                    string_normalizer: {
+                      type: 'custom',
+                      filter: ['lowercase', 'asciifolding'],
                     },
                   },
                 },
               },
-            })
-            .catch((e) => {
-              throw DatabaseError('Error creating index', { error: e });
-            });
-        }
-        /* istanbul ignore next */
-        return result;
-      });
+              mappings: {
+                dynamic_templates: [
+                  {
+                    integers: {
+                      match_mapping_type: 'long',
+                      mapping: {
+                        type: 'integer',
+                      },
+                    },
+                  },
+                  {
+                    strings: {
+                      match_mapping_type: 'string',
+                      mapping: {
+                        type: 'text',
+                        fields: {
+                          keyword: {
+                            type: 'keyword',
+                            normalizer: 'string_normalizer',
+                            ignore_above: 512,
+                          },
+                        },
+                      },
+                    },
+                  },
+                ],
+                properties: {
+                  timestamp: {
+                    type: 'date',
+                  },
+                  created: {
+                    type: 'date',
+                  },
+                  modified: {
+                    type: 'date',
+                  },
+                  first_seen: {
+                    type: 'date',
+                  },
+                  last_seen: {
+                    type: 'date',
+                  },
+                  start_time: {
+                    type: 'date',
+                  },
+                  stop_time: {
+                    type: 'date',
+                  },
+                  published: {
+                    type: 'date',
+                  },
+                  valid_from: {
+                    type: 'date',
+                  },
+                  valid_until: {
+                    type: 'date',
+                  },
+                  observable_date: {
+                    type: 'date',
+                  },
+                  event_date: {
+                    type: 'date',
+                  },
+                  received_time: {
+                    type: 'date',
+                  },
+                  processed_time: {
+                    type: 'date',
+                  },
+                  completed_time: {
+                    type: 'date',
+                  },
+                  ctime: {
+                    type: 'date',
+                  },
+                  mtime: {
+                    type: 'date',
+                  },
+                  atime: {
+                    type: 'date',
+                  },
+                  confidence: {
+                    type: 'integer',
+                  },
+                  x_opencti_report_status: {
+                    type: 'integer',
+                  },
+                  attribute_order: {
+                    type: 'integer',
+                  },
+                  base_score: {
+                    type: 'integer',
+                  },
+                  is_family: {
+                    type: 'boolean',
+                  },
+                  number_observed: {
+                    type: 'integer',
+                  },
+                  x_opencti_negative: {
+                    type: 'boolean',
+                  },
+                  default_assignation: {
+                    type: 'boolean',
+                  },
+                  x_opencti_detection: {
+                    type: 'boolean',
+                  },
+                  x_opencti_order: {
+                    type: 'integer',
+                  },
+                  import_expected_number: {
+                    type: 'integer',
+                  },
+                  import_processed_number: {
+                    type: 'integer',
+                  },
+                  x_opencti_score: {
+                    type: 'integer',
+                  },
+                  connections: {
+                    type: 'nested',
+                  },
+                },
+              },
+            },
+          })
+          .catch((e) => {
+            throw DatabaseError('Error creating index', { error: e });
+          });
+      }
+      return true;
     })
   );
 };
@@ -313,7 +313,15 @@ export const elDeleteIndexes = async (indexesToDelete) => {
   );
 };
 
-export const elCount = (user, indexName, options = {}) => {
+interface elCountOptions {
+  relationshipType?: string;
+  endDate?: Date;
+  types?: string[];
+  fromId?: string;
+  toTypes?: string[];
+  isMetaRelationship?: boolean;
+}
+export const elCount = (user, indexName, options?: elCountOptions) => {
   const {
     endDate = null,
     types = null,
@@ -591,7 +599,14 @@ export const elFindByFromAndTo = async (user, fromId, toId, relationshipType) =>
   return hits;
 };
 
-export const elFindByIds = async (user, ids, opts = {}) => {
+interface FindByIdsOptions {
+  indices?: string[];
+  type?: string;
+  toMap?: boolean;
+  relExclude?: boolean;
+  minSource?: boolean;
+}
+export const elFindByIds = async (user, ids, opts: FindByIdsOptions = {}): Promise<string> => {
   const { indices = READ_DATA_INDICES, toMap = false, type = null } = opts;
   const { relExclude = true, minSource = false } = opts;
   const idsArray = Array.isArray(ids) ? ids : [ids];
@@ -865,7 +880,7 @@ export const elHistogramCount = async (user, type, field, interval, start, end, 
     default:
       throw FunctionalError('Unsupported interval, please choose between year, month or day', interval);
   }
-  let baseFilters = [
+  let baseFilters: any[] = [
     {
       range: {
         [field]: {
@@ -912,7 +927,7 @@ export const elHistogramCount = async (user, type, field, interval, start, end, 
   const must = R.concat(baseFilters, histogramFilters);
   const markingRestrictions = buildMarkingRestriction(user);
   must.push(...markingRestrictions.must);
-  const query = {
+  const query: RequestParams.Search = {
     index: READ_PLATFORM_INDICES,
     ignore_throttled: IGNORE_THROTTLED,
     _source_excludes: '*', // Dont need to get anything
@@ -948,9 +963,24 @@ export const elHistogramCount = async (user, type, field, interval, start, end, 
 export const specialElasticCharsEscape = (query) => {
   return query.replace(/([+|\-*()~={}[\]:?\\])/g, '\\$1');
 };
-export const elPaginate = async (user, indexName, options = {}) => {
+enum OrderMode {
+  Asc = 'asc',
+  Desc = 'desc',
+}
+interface elPaginateOptions {
+  first?: number;
+  after?: string;
+  orderBy?: string;
+  search?: string;
+  orderMode?: OrderMode;
+  minSource?: boolean;
+  connectionFormat?: boolean;
+  types?: string[];
+  filters?: any[];
+}
+export const elPaginate = async (user, indexName, options: elPaginateOptions = {}) => {
   // eslint-disable-next-line no-use-before-define
-  const { first = 200, after, orderBy = null, orderMode = 'asc', minSource = false } = options;
+  const { first = 200, after, orderBy = null, orderMode = OrderMode.Asc, minSource = false } = options;
   const { types = null, filters = [], search = null, connectionFormat = true } = options;
   const searchAfter = after ? cursorToOffset(after) : undefined;
   let must = [];
@@ -1107,7 +1137,7 @@ export const elPaginate = async (user, indexName, options = {}) => {
     // Default ordering by id
     ordering.push({ 'standard_id.keyword': 'asc' });
   }
-  let body = {
+  let body: RequestBody = {
     size: first || 10,
     sort: ordering,
     query: {
@@ -1120,7 +1150,7 @@ export const elPaginate = async (user, indexName, options = {}) => {
   if (searchAfter) {
     body = { ...body, search_after: searchAfter };
   }
-  const query = {
+  const query: RequestParams.Search = {
     index: indexName,
     ignore_throttled: IGNORE_THROTTLED,
     _source_excludes: `${REL_INDEX_PREFIX}*`,
@@ -1131,7 +1161,7 @@ export const elPaginate = async (user, indexName, options = {}) => {
   logger.debug(`[ELASTICSEARCH] paginate`, { query });
   return el
     .search(query)
-    .then((data) => {
+    .then((data: ApiResponse) => {
       const dataWithIds = R.map((n) => {
         const loadedElement = { ...n._source, _index: n._index, id: n._source.internal_id, sort: n.sort };
         if (loadedElement.base_type === BASE_TYPE_RELATION) {
@@ -1167,7 +1197,10 @@ export const elPaginate = async (user, indexName, options = {}) => {
       }
     );
 };
-export const elList = async (user, indexName, options = {}) => {
+interface elListOptions extends elPaginateOptions {
+  callback?: Function;
+}
+export const elList = async (user, indexName, options: elListOptions = {}) => {
   let hasNextPage = true;
   let searchAfter = options.after;
   const listing = [];
@@ -1446,8 +1479,8 @@ export const elDeleteElement = async (user, element) => {
   return elDeleteElements(user, [element]);
 };
 
-export const prepareElementForIndexing = (element) => {
-  const thing = {};
+export const prepareElementForIndexing = (element: StixObject): StixObject => {
+  const thing: StixObject = { base_type: element.base_type };
   Object.keys(element).forEach((key) => {
     const value = element[key];
     if (Array.isArray(value)) {
@@ -1503,7 +1536,7 @@ const prepareRelation = (thing) => {
 const prepareEntity = (thing) => {
   return R.pipe(R.dissoc(INTERNAL_TO_FIELD), R.dissoc(INTERNAL_FROM_FIELD))(thing);
 };
-const prepareIndexing = async (elements) => {
+const prepareIndexing = async (elements: StixObject[]) => {
   return Promise.all(
     R.map(async (element) => {
       // Ensure empty list are not indexed
@@ -1520,10 +1553,12 @@ export const elIndexElements = async (elements) => {
   // 00. Relations must be transformed before indexing.
   const transformedElements = await prepareIndexing(elements);
   // 01. Bulk the indexing of row elements
-  const body = transformedElements.flatMap((doc) => [
-    { index: { _index: doc._index, _id: doc.internal_id, retry_on_conflict: ES_RETRY_ON_CONFLICT } },
-    R.pipe(R.dissoc('_index'))(doc),
-  ]);
+  const body = transformedElements
+    .map((doc: any) => [
+      { index: { _index: doc._index, _id: doc.internal_id, retry_on_conflict: ES_RETRY_ON_CONFLICT } },
+      R.pipe(R.dissoc('_index'))(doc),
+    ])
+    .flat();
   if (body.length > 0) {
     await elBulk({ refresh: true, body });
   }

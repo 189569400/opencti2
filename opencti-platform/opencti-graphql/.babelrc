@@ -7,9 +7,13 @@
           "node": "current"
         }
       }
-    ]
+    ],
+    "@babel/preset-typescript"
   ],
   "plugins": [
     "@babel/plugin-proposal-optional-chaining"
+  ],
+  "ignore": [
+    "node_modules/**"
   ]
 }

@@ -13,7 +13,7 @@ import {
 } from '../schema/general';
 import { STIX_SIGHTING_RELATIONSHIP } from '../schema/stixSightingRelationship';
 
-const pjson = require('../../package.json');
+const packageInfo = require('../../package.json');
 
 const DEFAULT_ENV = 'production';
 export const OPENCTI_TOKEN = 'opencti_token';
@@ -153,7 +153,7 @@ if (environment === 'test') {
   });
 }
 
-const addBasicMetaInformation = (meta) => ({ ...meta, version: pjson.version });
+const addBasicMetaInformation = (meta) => ({ ...meta, version: packageInfo.version });
 export const logger = {
   debug: (message, meta) => loggerInstance.debug(message, addBasicMetaInformation(meta)),
   info: (message, meta) => loggerInstance.info(message, addBasicMetaInformation(meta)),
