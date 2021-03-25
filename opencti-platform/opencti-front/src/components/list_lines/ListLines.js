@@ -217,7 +217,7 @@ class ListLines extends Component {
                 </span>
               );
               return (
-                <span>
+                <span key={currentFilter[0]}>
                   <Chip
                     key={currentFilter[0]}
                     classes={{ root: classes.filter }}

@@ -253,24 +253,19 @@ class Filters extends Component {
         });
         break;
       case 'x_opencti_report_status':
-        fetchQuery(attributesSearchQuery, {
-          fieldKey: 'x_opencti_report_status',
-          search: event && event.target.value !== 0 ? event.target.value : '',
-          first: 10,
-        }).then((data) => {
-          const entities = pipe(
-            pathOr([], ['attributes', 'edges']),
-            map((n) => ({
-              label: t(`report_status_${n.node.value}`),
-              value: n.node.value,
-              type: 'attribute',
-            })),
-          )(data);
-          this.setState({
-            entities: {
-              x_opencti_report_status: union(this.state.entities, entities),
-            },
-          });
+        this.setState({
+          entities: {
+            x_opencti_report_status: union(
+              this.state.entities,
+              pipe(
+                map((n) => ({
+                  label: t(`report_status_${n}`),
+                  value: n,
+                  type: 'attribute',
+                })),
+              )(['0', '1', '2', '3']),
+            ),
+          },
         });
         break;
       case 'x_opencti_organization_type':
@@ -457,7 +452,7 @@ class Filters extends Component {
                   onInputChange={this.searchEntities.bind(this, filterKey)}
                   inputValue={inputValues[filterKey] || ''}
                   onChange={this.handleChange.bind(this, filterKey)}
-                  getOptionSelected={(option, value) => option.value === value}
+                  getOptionSelected={(option, value) => option.value === value.value}
                   renderInput={(params) => (
                     <TextField
                       {...params}
